@@ -37,6 +37,12 @@ function withAriaLabel(n: BotNode): BotNode {
 const isEditable = (el: EventTarget | null) =>
   el instanceof HTMLElement && (el.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(el.tagName));
 
+// Copy/paste/select-all belong to the browser while text is selected or focus is in a
+// text region (e.g. the prompt preview), so the canvas must not swallow them.
+const wantsNativeText = (e: KeyboardEvent) =>
+  (e.target instanceof HTMLElement && !!e.target.closest('[data-native-keys]')) ||
+  !(window.getSelection()?.isCollapsed ?? true);
+
 function useEditorShortcuts() {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -45,6 +51,7 @@ function useEditorShortcuts() {
       if (!mod) return;
       const s = useProject.getState();
       const key = e.key.toLowerCase();
+      if (['a', 'c', 'v', 'x'].includes(key) && wantsNativeText(e)) return;
       const run = (fn: () => void) => {
         e.preventDefault();
         fn();
@@ -166,7 +173,7 @@ export function Canvas() {
         fitViewOptions={{ padding: 0.2, maxZoom: 1 }}
       >
         <Background variant={BackgroundVariant.Dots} gap={GRID} size={1.2} />
-        <MiniMap nodeClassName={minimapClass} pannable zoomable ariaLabel="미니맵" />
+        <MiniMap nodeClassName={minimapClass} pannable zoomable ariaLabel="미니맵" style={{ width: 168, height: 112 }} />
         <ZoomControls />
       </ReactFlow>
       {nodes.length === 0 && <EmptyState />}

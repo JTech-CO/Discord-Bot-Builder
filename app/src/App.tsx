@@ -4,7 +4,7 @@ import { useEffect } from 'react';
 import { Canvas } from './editor/Canvas';
 import { Inspector } from './editor/Inspector';
 import { NodeLibrary } from './editor/NodeLibrary';
-import { ProblemsPanel } from './editor/ProblemsPanel';
+import { BottomPanel } from './editor/BottomPanel';
 import { TopBar } from './editor/TopBar';
 import { useUI } from './store/ui';
 import { IconButton, cx } from './ui/controls';
@@ -72,7 +72,7 @@ export default function App() {
             <div className="min-h-0 flex-1">
               <Canvas />
             </div>
-            {bottomOpen && <ProblemsPanel />}
+            {bottomOpen && <BottomPanel />}
             <NoticeBar />
           </main>
           {rightOpen && <div className={cx(side, 'right-0')}><Inspector /></div>}

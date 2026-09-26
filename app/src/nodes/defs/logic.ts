@@ -2,6 +2,13 @@ import { Dices, Hourglass, Percent, ShieldCheck, Shuffle, Split, Timer, Waypoint
 import type { NodeDef } from '../types';
 import { SNOWFLAKE_OR_REF, clip, is, list, num, str } from '../helpers';
 
+const OPERATOR_SPEC: Record<string, string> = {
+  '==': 'equals', '!=': 'does not equal',
+  '>': 'is greater than', '>=': 'is greater than or equal to', '<': 'is less than', '<=': 'is less than or equal to',
+  contains: 'contains (case-insensitive)', startsWith: 'starts with (case-insensitive)',
+  empty: 'is empty after trimming', notEmpty: 'is not empty after trimming',
+};
+
 const COMPARATORS = [
   { value: '==', label: '같음' },
   { value: '!=', label: '다름' },
@@ -38,6 +45,14 @@ export const ifElse: NodeDef = {
     const left = str(p, 'left') || '?';
     return clip(UNARY.has(op) ? `${left} ${comparatorLabel(op)}` : `${left} ${op} ${str(p, 'right') || '?'}`, 40);
   },
+  spec: (p, f) => {
+    const op = str(p, 'operator') || '==';
+    const cond = UNARY.has(op) ? `${f.text(p.left)} ${OPERATOR_SPEC[op]}` : `${f.text(p.left)} ${OPERATOR_SPEC[op] ?? op} ${f.text(p.right)}`;
+    const how = ['>', '>=', '<', '<='].includes(op)
+      ? ' Compare as numbers; if either side is not a number the condition is false.'
+      : ['==', '!='].includes(op) ? ' Compare as numbers when both sides are numbers, otherwise as trimmed text.' : '';
+    return `Take exit "true" if ${cond}, otherwise exit "false".${how}`;
+  },
 };
 
 export const switchCase: NodeDef = {
@@ -56,6 +71,10 @@ export const switchCase: NodeDef = {
     { id: 'default', label: '그 외' },
   ],
   summary: (p) => clip(str(p, 'value') || '?'),
+  spec: (p, f) => {
+    const cases = list(p, 'cases').map((c, i) => `"case-${i}" when it equals ${f.text(c)}`).join('; ');
+    return `Compare ${f.text(p.value)} (trimmed, case-insensitive) with the cases in order and take the first match: ${cases}. If none match, take exit "default".`;
+  },
 };
 
 export const chance: NodeDef = {
@@ -70,6 +89,7 @@ export const chance: NodeDef = {
     { id: 'fail', label: '실패' },
   ],
   summary: (p) => `${num(p, 'percent') ?? '?'}%`,
+  spec: (p) => `Take exit "success" with probability ${num(p, 'percent') ?? 50}%, otherwise exit "fail".`,
 };
 
 export const random: NodeDef = {
@@ -91,6 +111,7 @@ export const random: NodeDef = {
       ? [{ level: 'error', field: 'max', message: '최댓값이 최솟값보다 작습니다.' }]
       : [];
   },
+  spec: (p) => `Pick a uniformly random integer from ${num(p, 'min') ?? 1} to ${num(p, 'max') ?? 6}, inclusive, as output result.`,
 };
 
 export const pick: NodeDef = {
@@ -102,6 +123,7 @@ export const pick: NodeDef = {
   fields: [{ key: 'items', label: '항목', kind: 'list', required: true, maxItems: 100, maxLength: 500, placeholder: '대길' }],
   outputs: () => [{ key: 'result', label: '고른 항목', type: 'text' }],
   summary: (p) => `${list(p, 'items').length}개 중 하나`,
+  spec: (p, f) => `Pick one item uniformly at random from ${f.list(p.items)} as output result.`,
 };
 
 export const wait: NodeDef = {
@@ -122,6 +144,8 @@ export const wait: NodeDef = {
     },
   ],
   summary: (p) => `${num(p, 'duration') ?? '?'}${({ seconds: '초', minutes: '분', hours: '시간' })[str(p, 'unit')] ?? '초'}`,
+  spec: (p) => `Wait ${num(p, 'duration') ?? 5} ${str(p, 'unit') || 'seconds'} without blocking other events, then continue.`,
+  requires: () => ({ slow: true }),
 };
 
 export const cooldown: NodeDef = {
@@ -147,6 +171,11 @@ export const cooldown: NodeDef = {
   ],
   outputs: () => [{ key: 'remaining', label: '남은 시간(초)', type: 'number' }],
   summary: (p) => `${num(p, 'seconds') ?? '?'}초`,
+  spec: (p) => {
+    const s = num(p, 'seconds') ?? 10;
+    const who = { user: 'the same user', server: 'anyone in the same server', global: 'anyone' }[str(p, 'scope') || 'user'];
+    return `Cooldown of ${s} seconds for this step, kept in memory. If ${who} passed this step less than ${s} seconds ago, take exit "blocked" with output remaining = seconds left, rounded up. Otherwise record the time and take exit "pass".`;
+  },
 };
 
 export const permission: NodeDef = {
@@ -174,6 +203,13 @@ export const permission: NodeDef = {
     { id: 'yes', label: '있음' },
     { id: 'no', label: '없음' },
   ],
+  spec: (p, f) => {
+    const check = str(p, 'check') || 'administrator';
+    const what = check === 'hasRole'
+      ? `has role ${f.target(p.roleId)}`
+      : `has the ${{ administrator: 'Administrator', manageMessages: 'Manage Messages', manageRoles: 'Manage Roles', kickMembers: 'Kick Members', banMembers: 'Ban Members' }[check] ?? 'Administrator'} permission in the server`;
+    return `Take exit "yes" if member ${f.target(p.member)} ${what}, otherwise exit "no" (also "no" if the member cannot be fetched).`;
+  },
 };
 
 export const logicDefs = [ifElse, switchCase, chance, random, pick, wait, cooldown, permission];

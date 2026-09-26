@@ -49,3 +49,13 @@ export const OUT_USER: OutputDef = { key: 'user', label: '사용자', type: 'use
 export const OUT_MEMBER: OutputDef = { key: 'member', label: '서버 멤버', type: 'member' };
 export const OUT_CHANNEL: OutputDef = { key: 'channel', label: '채널', type: 'channel' };
 export const OUT_MESSAGE: OutputDef = { key: 'message', label: '메시지', type: 'message' };
+
+/** Identifier-like text that may appear unquoted in a prompt; anything else becomes "?". */
+export const safeKey = (v: unknown): string => {
+  const s = typeof v === 'string' ? v : '';
+  return /^[\p{L}\p{N}_-]{1,64}$/u.test(s) ? s : '?';
+};
+
+/** Picks `v` when it is one of `allowed`, otherwise `fallback`. */
+export const oneOf = <T extends string>(v: unknown, allowed: readonly T[], fallback: T): T =>
+  allowed.includes(v as T) ? (v as T) : fallback;

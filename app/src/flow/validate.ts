@@ -7,6 +7,7 @@ import {
 } from './graph';
 import { nodeNumber, type BotEdge, type BotNode } from './model';
 import { isSingleRef, parseRefs } from './refs';
+import { findSecret } from './secrets';
 
 export type IssueLevel = 'error' | 'warning';
 
@@ -89,6 +90,11 @@ function checkField(f: FieldDef, value: unknown, node: BotNode, idx: GraphIndex,
   const err = (message: string) => push('error', message, node.id, f.key);
   const warn = (message: string) => push('warning', message, node.id, f.key);
   const missing = () => err(`"${f.label}" 항목이 비어 있습니다.`);
+  const secret = (s: string) => {
+    const kind = findSecret(s);
+    if (kind) err(`"${f.label}"에 비밀값(${kind})으로 보이는 값이 있습니다. 비밀값은 {{env.이름}}으로 넣고, 생성된 봇의 .env 파일에 적으세요.`);
+    return !!kind;
+  };
 
   switch (f.kind) {
     case 'text':
@@ -98,6 +104,7 @@ function checkField(f: FieldDef, value: unknown, node: BotNode, idx: GraphIndex,
         if (f.required) missing();
         return;
       }
+      if (secret(s)) return;
       if (f.maxLength && s.length > f.maxLength) err(`"${f.label}"은(는) ${f.maxLength}자까지 쓸 수 있습니다.`);
       if (f.pattern && !f.pattern.regex.test(s.trim())) err(`"${f.label}": ${f.pattern.message}`);
       const refs = parseRefs(s);
@@ -134,6 +141,7 @@ function checkField(f: FieldDef, value: unknown, node: BotNode, idx: GraphIndex,
       if (f.required && !items.some((s) => s.trim())) return missing();
       if (items.length > f.maxItems) err(`"${f.label}"은(는) ${f.maxItems}개까지 넣을 수 있습니다.`);
       if (items.some((s) => !s.trim())) warn(`"${f.label}"에 빈 항목이 있습니다.`);
+      items.some(secret);
       if (f.maxLength && items.some((s) => s.length > f.maxLength!)) err(`"${f.label}"의 각 항목은 ${f.maxLength}자까지 쓸 수 있습니다.`);
       return;
     }
@@ -155,6 +163,7 @@ function checkField(f: FieldDef, value: unknown, node: BotNode, idx: GraphIndex,
             if (c.required) err(`${cell} 칸이 비어 있습니다.`);
             continue;
           }
+          if (secret(s)) continue;
           if (c.maxLength && s.length > c.maxLength) err(`${cell} 칸은 ${c.maxLength}자까지 쓸 수 있습니다.`);
           if (c.pattern && !c.pattern.regex.test(s.trim())) err(`${cell}: ${c.pattern.message}`);
           checkRefs(s, f.label, node, idx, err, warn);

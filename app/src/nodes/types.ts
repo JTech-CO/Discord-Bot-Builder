@@ -123,6 +123,53 @@ export interface CheckResult {
   field?: string;
 }
 
+export type Intent =
+  | 'Guilds'
+  | 'GuildMessages'
+  | 'MessageContent'
+  | 'GuildMembers'
+  | 'GuildVoiceStates'
+  | 'GuildMessageReactions';
+
+export type Permission =
+  | 'ViewChannel'
+  | 'SendMessages'
+  | 'EmbedLinks'
+  | 'ReadMessageHistory'
+  | 'AddReactions'
+  | 'ManageMessages'
+  | 'ManageRoles'
+  | 'ManageChannels'
+  | 'KickMembers'
+  | 'BanMembers'
+  | 'ModerateMembers'
+  | 'CreatePublicThreads'
+  | 'CreatePrivateThreads'
+  | 'SendMessagesInThreads';
+
+/** What the generated bot needs for a node to work. Collected into the prompt. */
+export interface Requirements {
+  intents?: Intent[];
+  partials?: ('Message' | 'Channel' | 'Reaction')[];
+  permissions?: Permission[];
+  env?: { name: string; purpose: string }[];
+  packages?: string[];
+  /** Needs data that survives restarts. */
+  storage?: boolean;
+  /** May take seconds, so interaction flows containing it must defer their reply. */
+  slow?: boolean;
+}
+
+/** Renders prop values safely into the prompt. Implemented by the compiler. */
+export interface SpecFormat {
+  /** A literal as a JSON string, with references normalized to {{#N.key}} and secrets redacted. */
+  text(v: unknown): string;
+  /** A single reference ({{#1.member}}) or a Discord ID; anything else falls back to text(). */
+  target(v: unknown): string;
+  /** A string list as a JSON array. */
+  list(v: unknown): string;
+}
+
 export interface NodeDef {
   type: string;
   category: Category;
@@ -142,6 +189,9 @@ export interface NodeDef {
   needs?: TriggerContext[];
   /** Rules that span fields or nodes. Field-level rules come from `fields`. */
   check?: (props: Props, self: string, graph: GraphView) => CheckResult[];
+  /** One English instruction describing exactly what this step does, for the code-generating AI. */
+  spec: (props: Props, f: SpecFormat) => string;
+  requires?: (props: Props) => Requirements;
 }
 
 export const NEXT_PORT: PortDef = { id: 'next', label: '' };

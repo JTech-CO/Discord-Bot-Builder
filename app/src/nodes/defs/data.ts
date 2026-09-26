@@ -33,6 +33,21 @@ export const variable: NodeDef = {
   ],
   outputs: () => [{ key: 'value', label: '결과 값', type: 'any' }],
   summary: (p) => `${str(p, 'key') || '이름 없음'} ${OPERATION_LABEL[str(p, 'operation')] ?? '읽기'}`,
+  spec: (p, f) => {
+    const scope = {
+      user: `per user (the user is ${str(p, 'user') ? f.target(p.user) : 'the one who started the flow'})`,
+      server: 'per server (the server where the flow started)',
+      global: 'once for the whole bot',
+    }[str(p, 'scope') || 'user'];
+    const op = {
+      get: 'Read it',
+      set: `Set it to ${f.text(p.value)}`,
+      add: `Add ${f.text(p.value)} to it as a number`,
+      subtract: `Subtract ${f.text(p.value)} from it as a number`,
+    }[str(p, 'operation') || 'get'];
+    return `Persistent value named ${f.text(p.key)}, stored ${scope}. If it was never set, it is ${f.text(typeof p.initial === 'string' ? p.initial : '0')}. ${op}. Output value is the value after this step.`;
+  },
+  requires: () => ({ storage: true }),
 };
 
 export const math: NodeDef = {
@@ -68,6 +83,16 @@ export const math: NodeDef = {
   ],
   outputs: () => [{ key: 'result', label: '계산 결과', type: 'number' }],
   summary: (p) => clip(`${str(p, 'left') || '?'} ${str(p, 'operator') || '+'} ${str(p, 'right') || '?'}`, 40),
+  spec: (p, f) => {
+    const a = f.text(p.left);
+    const b = f.text(p.right);
+    const expr = {
+      '+': `${a} plus ${b}`, '-': `${a} minus ${b}`, '*': `${a} times ${b}`, '/': `${a} divided by ${b}`,
+      '%': `${a} modulo ${b}`, min: `the smaller of ${a} and ${b}`, max: `the larger of ${a} and ${b}`,
+    }[str(p, 'operator') || '+'];
+    const round = { round: ', rounded to the nearest integer', floor: ', rounded down', ceil: ', rounded up' }[str(p, 'round')] ?? '';
+    return `Compute ${expr} as numbers${round} (non-numbers count as 0; dividing by 0 gives 0) as output result.`;
+  },
 };
 
 export const text: NodeDef = {
@@ -90,6 +115,10 @@ export const text: NodeDef = {
   ],
   outputs: () => [{ key: 'result', label: '만든 문장', type: 'text' }],
   summary: (p) => clip(str(p, 'template') || '비어 있음'),
+  spec: (p, f) => {
+    const t = { upper: ', converted to uppercase', lower: ', converted to lowercase', trim: ', with surrounding whitespace removed' }[str(p, 'transform')] ?? '';
+    return `Build the text ${f.text(p.template)}${t} as output result.`;
+  },
 };
 
 export const dataDefs = [variable, math, text];

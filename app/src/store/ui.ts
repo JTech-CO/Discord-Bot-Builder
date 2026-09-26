@@ -1,9 +1,13 @@
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
+import type { PromptMode } from '../compiler/compile';
 import { debouncedLocalStorage } from './storage';
 
 export type Theme = 'system' | 'dark' | 'light';
-export type BottomTab = 'problems';
+export type BottomTab = 'problems' | 'prompt';
+
+export const BOTTOM_MIN = 160;
+export const BOTTOM_DEFAULT = 320;
 
 interface Notice {
   text: string;
@@ -17,13 +21,19 @@ interface UIState {
   rightOpen: boolean;
   bottomOpen: boolean;
   bottomTab: BottomTab;
+  bottomHeight: number;
+  promptMode: PromptMode;
   /** Bumped to ask the canvas to pan to a node. */
   focusRequest: { nodeId: string; nonce: number } | null;
   notice: Notice | null;
   setTheme: (t: Theme) => void;
   togglePanel: (side: 'left' | 'right') => void;
   setBottomOpen: (open: boolean) => void;
+  /** Opens the tab, or closes the panel if that tab is already showing. */
+  toggleBottom: (tab: BottomTab) => void;
   openBottom: (tab: BottomTab) => void;
+  setBottomHeight: (h: number) => void;
+  setPromptMode: (m: PromptMode) => void;
   focusNode: (nodeId: string) => void;
   notify: (text: string, level?: Notice['level']) => void;
   dismissNotice: () => void;
@@ -39,12 +49,17 @@ export const useUI = create<UIState>()(
       rightOpen: wide,
       bottomOpen: false,
       bottomTab: 'problems',
+      bottomHeight: BOTTOM_DEFAULT,
+      promptMode: 'agent',
       focusRequest: null,
       notice: null,
       setTheme: (theme) => set({ theme }),
       togglePanel: (side) => set((s) => (side === 'left' ? { leftOpen: !s.leftOpen } : { rightOpen: !s.rightOpen })),
       setBottomOpen: (bottomOpen) => set({ bottomOpen }),
+      toggleBottom: (tab) => set((s) => (s.bottomOpen && s.bottomTab === tab ? { bottomOpen: false } : { bottomOpen: true, bottomTab: tab })),
       openBottom: (bottomTab) => set({ bottomOpen: true, bottomTab }),
+      setBottomHeight: (h) => set({ bottomHeight: Math.round(Math.max(BOTTOM_MIN, h)) }),
+      setPromptMode: (promptMode) => set({ promptMode }),
       focusNode: (nodeId) => set({ focusRequest: { nodeId, nonce: Date.now() } }),
       notify: (text, level = 'info') => set({ notice: { text, level, id: Date.now() } }),
       dismissNotice: () => set({ notice: null }),
@@ -52,7 +67,7 @@ export const useUI = create<UIState>()(
     {
       name: 'dbb:ui',
       storage: createJSONStorage(() => debouncedLocalStorage),
-      partialize: (s) => ({ theme: s.theme, bottomOpen: s.bottomOpen }),
+      partialize: (s) => ({ theme: s.theme, bottomOpen: s.bottomOpen, bottomTab: s.bottomTab, bottomHeight: s.bottomHeight, promptMode: s.promptMode }),
     },
   ),
 );
