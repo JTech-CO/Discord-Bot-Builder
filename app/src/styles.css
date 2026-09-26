@@ -1,0 +1,242 @@
+@import 'tailwindcss';
+@import 'pretendard/dist/web/variable/pretendardvariable-dynamic-subset.css';
+@import '@xyflow/react/dist/base.css';
+
+/* ── Tokens ───────────────────────────────────────────
+   Dark is the default. Light applies when the OS asks for it
+   (unless the user forced dark) or when the user forces light. */
+:root {
+  color-scheme: dark;
+  --canvas: #111216;
+  --canvas-dot: #2a2c33;
+  --panel: #18191e;
+  --raised: #1f2026;
+  --field: #111216;
+  --hover: #25272e;
+  --line: #2a2c33;
+  --line-strong: #3b3e47;
+  --fg: #e7e8eb;
+  --fg-muted: #a3a6ae;
+  --fg-subtle: #878b95;
+  --accent: #5865f2;
+  --accent-hover: #4b57de;
+  --accent-fg: #97a0fa;
+  --accent-soft: rgb(88 101 242 / 0.14);
+  --danger: #f0585b;
+  --danger-soft: rgb(240 88 91 / 0.12);
+  --warning: #e3a13b;
+  --warning-soft: rgb(227 161 59 / 0.12);
+  --success: #3fb27f;
+
+  --cat-trigger: #7d87ff;
+  --cat-action: #3fb27f;
+  --cat-logic: #e3a13b;
+  --cat-data: #45a9dc;
+  --cat-integration: #e0705f;
+  --cat-custom: #b58af0;
+}
+
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme='dark']) {
+    color-scheme: light;
+    --canvas: #f1f2f5;
+    --canvas-dot: #d3d6dc;
+    --panel: #ffffff;
+    --raised: #ffffff;
+    --field: #f6f7f9;
+    --hover: #eef0f3;
+    --line: #e2e4e9;
+    --line-strong: #c9ccd3;
+    --fg: #17181c;
+    --fg-muted: #50545d;
+    --fg-subtle: #676b75;
+    --accent: #4f5bd5;
+    --accent-hover: #434ec2;
+    --accent-fg: #3e49b8;
+    --accent-soft: rgb(79 91 213 / 0.1);
+    --danger: #cf3336;
+    --danger-soft: rgb(207 51 54 / 0.08);
+    --warning: #a86a0c;
+    --warning-soft: rgb(168 106 12 / 0.1);
+    --success: #1f8a5a;
+
+    --cat-trigger: #4f5bd5;
+    --cat-action: #1f8a5a;
+    --cat-logic: #b3740f;
+    --cat-data: #1f7fb0;
+    --cat-integration: #c0493a;
+    --cat-custom: #8a55cf;
+  }
+}
+
+:root[data-theme='light'] {
+  color-scheme: light;
+  --canvas: #f1f2f5;
+  --canvas-dot: #d3d6dc;
+  --panel: #ffffff;
+  --raised: #ffffff;
+  --field: #f6f7f9;
+  --hover: #eef0f3;
+  --line: #e2e4e9;
+  --line-strong: #c9ccd3;
+  --fg: #17181c;
+  --fg-muted: #50545d;
+  --fg-subtle: #676b75;
+  --accent: #4f5bd5;
+  --accent-hover: #434ec2;
+  --accent-fg: #3e49b8;
+  --accent-soft: rgb(79 91 213 / 0.1);
+  --danger: #cf3336;
+  --danger-soft: rgb(207 51 54 / 0.08);
+  --warning: #a86a0c;
+  --warning-soft: rgb(168 106 12 / 0.1);
+  --success: #1f8a5a;
+
+  --cat-trigger: #4f5bd5;
+  --cat-action: #1f8a5a;
+  --cat-logic: #b3740f;
+  --cat-data: #1f7fb0;
+  --cat-integration: #c0493a;
+  --cat-custom: #8a55cf;
+}
+
+@theme inline {
+  --color-canvas: var(--canvas);
+  --color-panel: var(--panel);
+  --color-raised: var(--raised);
+  --color-field: var(--field);
+  --color-hover: var(--hover);
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
+  --color-fg: var(--fg);
+  --color-fg-muted: var(--fg-muted);
+  --color-fg-subtle: var(--fg-subtle);
+  --color-accent: var(--accent);
+  --color-accent-hover: var(--accent-hover);
+  --color-accent-fg: var(--accent-fg);
+  --color-accent-soft: var(--accent-soft);
+  --color-danger: var(--danger);
+  --color-danger-soft: var(--danger-soft);
+  --color-warning: var(--warning);
+  --color-warning-soft: var(--warning-soft);
+  --color-success: var(--success);
+}
+
+@theme {
+  --font-sans: 'Pretendard Variable', Pretendard, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-mono: ui-monospace, 'Cascadia Code', 'SF Mono', Consolas, monospace;
+}
+
+/* ── Base ─────────────────────────────────────────── */
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  overflow: hidden;
+  background: var(--panel);
+  color: var(--fg);
+  font-family: var(--font-sans);
+  font-size: 14px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+::selection {
+  background: var(--accent-soft);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0ms !important;
+    animation-duration: 0ms !important;
+  }
+}
+
+/* ── React Flow ───────────────────────────────────── */
+.react-flow {
+  --xy-background-color: var(--canvas);
+  --xy-background-pattern-color: var(--canvas-dot);
+  --xy-minimap-background-color: var(--panel);
+  --xy-minimap-mask-background-color: color-mix(in srgb, var(--canvas) 65%, transparent);
+  --xy-minimap-node-background-color: var(--line-strong);
+  --xy-edge-stroke: var(--line-strong);
+  --xy-edge-stroke-selected: var(--accent);
+  --xy-edge-stroke-width: 1.5;
+  --xy-connectionline-stroke: var(--accent);
+  --xy-connectionline-stroke-width: 1.5;
+  --xy-selection-background-color: var(--accent-soft);
+  --xy-selection-border: 1px solid var(--accent);
+}
+
+.react-flow__edge.selected .react-flow__edge-path,
+.react-flow__edge:focus-visible .react-flow__edge-path {
+  stroke-width: 2;
+}
+
+.react-flow__edge-textbg {
+  fill: var(--canvas);
+}
+
+.react-flow__edge-text {
+  fill: var(--fg-muted);
+  font-size: 12px;
+}
+
+.react-flow__handle {
+  width: 10px;
+  height: 10px;
+  border: 2px solid var(--line-strong);
+  background: var(--raised);
+  border-radius: 999px;
+}
+
+.react-flow__handle.connectingfrom,
+.react-flow__handle.valid,
+.react-flow__handle:hover {
+  border-color: var(--accent);
+}
+
+.react-flow__node:focus-visible {
+  outline: none;
+}
+
+.react-flow__node:focus-visible > div {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.react-flow__controls {
+  box-shadow: none;
+}
+
+.react-flow__minimap {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+}
+
+.react-flow__minimap-node.mm-trigger { fill: var(--cat-trigger); }
+.react-flow__minimap-node.mm-action { fill: var(--cat-action); }
+.react-flow__minimap-node.mm-logic { fill: var(--cat-logic); }
+.react-flow__minimap-node.mm-data { fill: var(--cat-data); }
+.react-flow__minimap-node.mm-integration { fill: var(--cat-integration); }
+.react-flow__minimap-node.mm-custom { fill: var(--cat-custom); }
+
+.react-flow__attribution {
+  background: transparent;
+}
+
+.react-flow__attribution a {
+  color: var(--fg-subtle);
+}

@@ -1,0 +1,42 @@
+# Discord Bot Builder (v2)
+
+디스코드 봇을 노드로 설계하면, 그 흐름을 프롬프트로 컴파일해 AI가 실제 봇 코드(discord.js · TypeScript)를 만들어 주는 도구입니다.
+
+```
+캔버스(노드·연결) → Flow IR → 검증 → 프롬프트 컴파일 → AI 생성(files[]) → 미리보기·내보내기·실행
+```
+
+## 폴더
+
+| 경로 | 내용 |
+|---|---|
+| `app/src/nodes/` | 노드 정의. 폼 필드, 출력 포트, 출력값, 검증 규칙이 노드마다 한 곳에 있습니다. 노드를 추가할 때는 `defs/*.ts`에 항목 하나를 넣으면 됩니다. |
+| `app/src/flow/` | 그래프 모델, 변수 참조(`{{n3.result}}`, `{{env.KEY}}`), 검증기, 프로젝트 파일 포맷(`.dbb.json`) |
+| `app/src/store/` | 프로젝트(실행 취소 포함), 검증 결과, UI 상태 |
+| `app/src/editor/` | 캔버스, 노드 목록, 인스펙터, 문제 패널, 상단 바 |
+| `legacy/` | v1 "Hybrid AI Bot Builder"(2026-02) 코드와 기획 문서. 참고용이며 요구사항이 아닙니다. |
+
+## 실행
+
+```bash
+cd app
+npm install
+npm run dev
+```
+
+`npm run build`는 타입 검사 후 `app/dist/`에 정적 파일을 만듭니다. 빌드 결과물에는 CSP가 들어갑니다.
+
+## 로드맵
+
+| 단계 | 내용 | 상태 |
+|---|---|---|
+| 0 | v1 → `legacy/`, 새 스택(React 19 · @xyflow/react 12 · Tailwind 4 · zod 4 · Vite 8) | 완료 |
+| 1 | 에디터 코어: 노드 32종, 캔버스, 인스펙터, 실시간 검증, 자동 저장, 파일 저장·열기 | 완료 |
+| 2 | 프롬프트 컴파일러(노드별 명세 조각, 필요한 intent·권한·환경변수 집계), 프롬프트 미리보기·복사 | 다음 |
+| 3 | 앱 안 AI 생성(BYOK), 파일 트리 미리보기, zip 내보내기. 웹은 브라우저에서 직접 호출, Electron은 main process + safeStorage | |
+| 4 | 실행: 흐름 시뮬레이터(디스코드 없이), 생성된 봇 로컬 실행(Electron) | |
+| 이후 | 자연어로 흐름 초안 만들기, 커뮤니티 공유(서버 측 인가로 재설계) | |
+
+## 알려진 문제
+
+Node **v25.2.0**의 `fs.rmSync(..., { recursive: true })`는 Windows에서 경로에 한글이 있으면 크래시합니다(0xC0000409). 이 때문에 Vite의 출력 폴더 비우기 대신 `app/scripts/clean.mjs`를 씁니다. Node 24 LTS를 권장합니다.
