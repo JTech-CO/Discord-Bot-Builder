@@ -2,7 +2,7 @@ import { Clock, Mic, MousePointerClick, Power, SmilePlus, SquareSlash, TextCurso
 import type { CheckResult, NodeDef, OutputDef } from '../types';
 import {
   COMMAND_NAME, CUSTOM_ID, OUT_CHANNEL, OUT_MEMBER, OUT_MESSAGE, OUT_USER, SNOWFLAKE_OR_REF,
-  clip, is, list, num, rows, str,
+  clip, is, list, num, rows, safeKey, str,
 } from '../helpers';
 
 const OPTION_TYPES = [
@@ -18,6 +18,11 @@ const OPTION_TYPES = [
 const OPTION_VALUE_TYPE = {
   text: 'text', integer: 'number', number: 'number', boolean: 'boolean', user: 'user', channel: 'channel', role: 'role',
 } as const;
+
+// discord.js option builder names, so the AI maps option types without guessing.
+const OPTION_BUILDER: Record<string, string> = {
+  text: 'String', integer: 'Integer', number: 'Number', boolean: 'Boolean', user: 'User', channel: 'Channel', role: 'Role',
+};
 
 export const slashCommand: NodeDef = {
   type: 'trigger.slashCommand',
@@ -64,6 +69,16 @@ export const slashCommand: NodeDef = {
     }
     return out;
   },
+  spec: (p, f) => {
+    const opts = rows(p, 'options').filter((o) => o.name);
+    const options = opts.length
+      ? ` Options, in this order: ${opts
+          .map((o) => `${f.text(o.name)} (${OPTION_BUILDER[String(o.type)] ?? 'String'}, ${o.required === true ? 'required' : 'optional'}, description ${f.text(o.description)}) → output opt_${safeKey(o.name)}`)
+          .join('; ')}. Optional options that were not given are empty.`
+      : ' No options.';
+    return `Starts when a user runs the slash command named ${f.text(str(p, 'name'))} with description ${f.text(str(p, 'description'))}.${options}`;
+  },
+  requires: () => ({ intents: ['Guilds'] }),
 };
 
 export const message: NodeDef = {
@@ -91,6 +106,12 @@ export const message: NodeDef = {
     { key: 'content', label: '메시지 내용', type: 'text' },
   ],
   summary: (p) => clip(list(p, 'keywords').join(', ') || '키워드 없음'),
+  spec: (p, f) => {
+    const how = { contains: 'contains', exact: 'is exactly (after trimming)', startsWith: 'starts with' }[str(p, 'match') || 'contains'] ?? 'contains';
+    const bots = p.ignoreBots === false ? 'Also handle messages from other bots.' : 'Ignore messages sent by bots.';
+    return `Starts when a message in a server text channel ${how} any of ${f.list(p.keywords)}, compared case-insensitively. ${bots} Never react to this bot's own messages.`;
+  },
+  requires: () => ({ intents: ['Guilds', 'GuildMessages', 'MessageContent'], permissions: ['ViewChannel', 'ReadMessageHistory'] }),
 };
 
 export const button: NodeDef = {
@@ -120,6 +141,8 @@ export const button: NodeDef = {
     }
     return out;
   },
+  spec: (p, f) => `Starts when a user clicks a button whose custom ID is ${f.text(str(p, 'customId'))}. Output message is the message the button is attached to.`,
+  requires: () => ({ intents: ['Guilds'] }),
 };
 
 export const modalSubmit: NodeDef = {
@@ -152,6 +175,9 @@ export const modalSubmit: NodeDef = {
     if (!id || graph.nodesOfType('action.showModal').some((n) => str(n.props, 'customId') === id)) return [];
     return [{ level: 'warning', field: 'customId', message: `ID가 "${id}"인 모달을 띄우는 노드가 없습니다.` }];
   },
+  spec: (p, f) =>
+    `Starts when a user submits the modal whose custom ID is ${f.text(str(p, 'customId'))}. Each text input's value is output field_<input id>.`,
+  requires: () => ({ intents: ['Guilds'] }),
 };
 
 export const member: NodeDef = {
@@ -172,6 +198,11 @@ export const member: NodeDef = {
   ],
   outputs: () => [OUT_USER, OUT_MEMBER],
   summary: (p) => (str(p, 'event') === 'leave' ? '퇴장' : '입장'),
+  spec: (p) =>
+    str(p, 'event') === 'leave'
+      ? 'Starts when a member leaves (or is removed from) a server. The member may be partial.'
+      : 'Starts when a new member joins a server.',
+  requires: () => ({ intents: ['Guilds', 'GuildMembers'] }),
 };
 
 export const voice: NodeDef = {
@@ -197,6 +228,16 @@ export const voice: NodeDef = {
   ],
   outputs: () => [OUT_USER, OUT_MEMBER, { key: 'channel', label: '음성 채널', type: 'channel' }],
   summary: (p) => ({ join: '입장', leave: '퇴장', move: '이동' })[str(p, 'event')] ?? '입장',
+  spec: (p, f) => {
+    const what = {
+      join: 'joins a voice channel (was not in one before)',
+      leave: 'leaves voice entirely (is not in any voice channel after)',
+      move: 'moves from one voice channel to another',
+    }[str(p, 'event') || 'join'];
+    const where = str(p, 'channelId') ? ` The voice channel involved must be ${f.target(p.channelId)}.` : '';
+    return `Starts when a member ${what}.${where} Output channel is the channel joined, left, or moved into.`;
+  },
+  requires: () => ({ intents: ['Guilds', 'GuildVoiceStates'] }),
 };
 
 export const reaction: NodeDef = {
@@ -215,6 +256,16 @@ export const reaction: NodeDef = {
     { key: 'emoji', label: '이모지', type: 'text' },
   ],
   summary: (p) => str(p, 'emoji') || '모든 이모지',
+  spec: (p, f) => {
+    const emoji = str(p, 'emoji') ? `the reaction ${f.text(str(p, 'emoji'))} (match unicode emoji or custom emoji name)` : 'any reaction';
+    const target = str(p, 'messageId') ? `message ${f.target(p.messageId)}` : 'any message';
+    return `Starts when a user adds ${emoji} to ${target} in a server. Ignore reactions added by bots. Fetch partial reactions and messages before use.`;
+  },
+  requires: () => ({
+    intents: ['Guilds', 'GuildMessageReactions'],
+    partials: ['Message', 'Channel', 'Reaction'],
+    permissions: ['ViewChannel', 'ReadMessageHistory'],
+  }),
 };
 
 export const schedule: NodeDef = {
@@ -244,13 +295,21 @@ export const schedule: NodeDef = {
       key: 'time', label: '시각', kind: 'text', placeholder: '09:00', when: is('mode', 'daily'), required: true,
       pattern: { regex: /^([01]\d|2[0-3]):[0-5]\d$/, message: 'HH:MM 형식으로 입력해 주세요.' },
     },
-    { key: 'timezone', label: '시간대', kind: 'text', default: 'Asia/Seoul', maxLength: 64, when: is('mode', 'daily') },
+    {
+      key: 'timezone', label: '시간대', kind: 'text', default: 'Asia/Seoul', maxLength: 64, when: is('mode', 'daily'),
+      pattern: { regex: /^[A-Za-z]+(?:\/[A-Za-z0-9_+-]+){0,2}$/, message: 'Asia/Seoul 같은 IANA 시간대 이름을 넣어 주세요.' },
+    },
   ],
   outputs: () => [],
   summary: (p) =>
     str(p, 'mode') === 'daily'
       ? `매일 ${str(p, 'time') || '--:--'}`
       : `${num(p, 'every') ?? '?'}${str(p, 'unit') === 'hours' ? '시간' : '분'}마다`,
+  spec: (p, f) =>
+    str(p, 'mode') === 'daily'
+      ? `Starts every day at ${f.text(str(p, 'time'))} in the ${f.text(str(p, 'timezone') || 'Asia/Seoul')} time zone, while the bot is running. There is no user or channel context.`
+      : `Starts every ${num(p, 'every') ?? 30} ${str(p, 'unit') === 'hours' ? 'hours' : 'minutes'} while the bot is running (first run one interval after the bot is ready). There is no user or channel context.`,
+  requires: () => ({ intents: ['Guilds'] }),
 };
 
 export const ready: NodeDef = {
@@ -262,6 +321,9 @@ export const ready: NodeDef = {
   provides: 'event',
   fields: [],
   outputs: () => [],
+  spec: () => 'Starts once each time the bot has logged in and is ready. There is no user or channel context.',
+  requires: () => ({ intents: ['Guilds'] }),
 };
 
 export const triggerDefs = [slashCommand, message, button, modalSubmit, member, voice, reaction, schedule, ready];
+

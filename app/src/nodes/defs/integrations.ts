@@ -1,6 +1,13 @@
 import { Bot, Globe, Rss, Webhook } from 'lucide-react';
 import type { NodeDef } from '../types';
-import { ENV_NAME, clip, str } from '../helpers';
+import { ENV_NAME, clip, num, rows, str } from '../helpers';
+
+const AI_PROVIDERS: Record<string, { name: string; env: string; pkg: string; model?: string }> = {
+  anthropic: { name: 'Anthropic Claude', env: 'ANTHROPIC_API_KEY', pkg: '@anthropic-ai/sdk', model: 'claude-opus-5-5' },
+  openai: { name: 'OpenAI', env: 'OPENAI_API_KEY', pkg: 'openai' },
+  gemini: { name: 'Google Gemini', env: 'GEMINI_API_KEY', pkg: '@google/genai' },
+};
+const provider = (p: Record<string, unknown>) => AI_PROVIDERS[str(p, 'provider')] ?? AI_PROVIDERS.anthropic;
 
 export const http: NodeDef = {
   type: 'integration.http',
@@ -34,6 +41,16 @@ export const http: NodeDef = {
     ...(str(p, 'extract') ? [{ key: 'value', label: '꺼낸 값', type: 'any' as const }] : []),
   ],
   summary: (p) => clip(`${str(p, 'method') || 'GET'} ${str(p, 'url') || 'URL 없음'}`, 40),
+  spec: (p, f) => {
+    const method = str(p, 'method') || 'GET';
+    const headers = rows(p, 'headers').filter((h) => h.name).map((h) => `${f.text(h.name)}: ${f.text(h.value)}`).join(', ');
+    const body = !['GET', 'DELETE'].includes(method) && str(p, 'body').trim() ? ` and the JSON body ${f.text(p.body)}` : '';
+    const extract = str(p, 'extract').trim()
+      ? ` Output value is the value at path ${f.text(p.extract)} inside data (empty if missing).`
+      : '';
+    return `Send an HTTP ${method} request to ${f.text(p.url)}${headers ? ` with headers ${headers}` : ''}${body}. URL-encode placeholder values inserted into the URL. Time out after 10 seconds. Output status is the HTTP status (0 on network error or timeout); data is the parsed JSON body, or the text body if it is not JSON, or null on error.${extract}`;
+  },
+  requires: () => ({ slow: true }),
 };
 
 export const ai: NodeDef = {
@@ -58,6 +75,16 @@ export const ai: NodeDef = {
   ],
   outputs: () => [{ key: 'reply', label: 'AI 답변', type: 'text' }],
   summary: (p) => ({ anthropic: 'Claude', openai: 'OpenAI', gemini: 'Gemini' })[str(p, 'provider')] ?? 'Claude',
+  spec: (p, f) => {
+    const ai = provider(p);
+    const model = str(p, 'model').trim() ? f.text(p.model) : ai.model ? f.text(ai.model) : "the provider's current recommended general model";
+    const system = str(p, 'system').trim() ? f.text(p.system) : 'none';
+    return `Ask ${ai.name} (model ${model}, official SDK, API key from ${ai.env}) with system prompt ${system} and user message ${f.text(p.prompt)}. Time out after 30 seconds and truncate the reply to ${num(p, 'maxLength') ?? 1500} characters. Output reply is the answer; on any error, log it and use a short apology in the bot's language instead.`;
+  },
+  requires: (p) => {
+    const ai = provider(p);
+    return { slow: true, env: [{ name: ai.env, purpose: `${ai.name} API key` }], packages: [ai.pkg] };
+  },
 };
 
 export const webhook: NodeDef = {
@@ -75,6 +102,12 @@ export const webhook: NodeDef = {
     { key: 'username', label: '보내는 이름', kind: 'text', maxLength: 80 },
   ],
   summary: (p) => str(p, 'urlEnv') || '환경변수 없음',
+  spec: (p, f) =>
+    `POST a message to the webhook URL stored in environment variable ${f.text(p.urlEnv)} with content ${f.text(p.content)}${str(p, 'username').trim() ? ` and username ${f.text(p.username)}` : ''}, with all mentions disabled. Log failures and continue.`,
+  requires: (p) => ({
+    slow: true,
+    env: ENV_NAME.regex.test(str(p, 'urlEnv')) ? [{ name: str(p, 'urlEnv'), purpose: 'webhook URL (keep secret)' }] : [],
+  }),
 };
 
 export const rss: NodeDef = {
@@ -98,6 +131,9 @@ export const rss: NodeDef = {
     { key: 'link', label: '글 링크', type: 'text' },
   ],
   summary: (p) => clip(str(p, 'url').replace(/^https?:\/\//, '') || 'URL 없음'),
+  spec: (p, f) =>
+    `Fetch the RSS or Atom feed at ${f.text(p.url)} (timeout 10 seconds). Persist the id (guid, else link) of the newest item this step has seen. If the feed has a newer item than the stored one, take exit "new" with outputs title and link of the newest item and store its id; otherwise take exit "none". On the very first run, store the newest item and take "none" so old posts are not announced. On fetch errors, log and take "none".`,
+  requires: () => ({ slow: true, storage: true, packages: ['rss-parser'] }),
 };
 
 export const integrationDefs = [http, ai, webhook, rss];

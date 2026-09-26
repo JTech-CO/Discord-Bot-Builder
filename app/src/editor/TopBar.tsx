@@ -1,7 +1,7 @@
 import { useReactFlow } from '@xyflow/react';
 import {
   ChevronDown, CircleAlert, CircleCheck, Download, FilePlus2, FolderOpen, Monitor, Moon, PanelLeft, PanelRight,
-  Redo2, Sun, TriangleAlert, Undo2, Workflow,
+  Redo2, ScrollText, Sun, TriangleAlert, Undo2, Workflow,
 } from 'lucide-react';
 import { useRef, type ChangeEvent } from 'react';
 import { diceExample } from '../flow/examples';
@@ -9,21 +9,11 @@ import { MAX_FILE_BYTES, fromFile, parseProjectText, toFile, type LoadResult } f
 import { useIssues } from '../store/issues';
 import { useProject } from '../store/project';
 import { useUI, type Theme } from '../store/ui';
-import { IconButton, Menu, cx } from '../ui/controls';
+import { Button, IconButton, Menu, cx } from '../ui/controls';
+import { downloadText, safeFileName } from '../ui/files';
 
 const THEME_ICON = { system: Monitor, dark: Moon, light: Sun } as const;
 const THEME_LABEL = { system: '시스템 설정', dark: '어둡게', light: '밝게' } as const;
-
-const safeFileName = (name: string) => (name.trim() || 'bot').replace(/[\\/:*?"<>|\u0000-\u001f]/g, '_').slice(0, 80);
-
-function download(filename: string, text: string) {
-  const url = URL.createObjectURL(new Blob([text], { type: 'application/json' }));
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = filename;
-  a.click();
-  setTimeout(() => URL.revokeObjectURL(url), 0);
-}
 
 export function TopBar() {
   const rf = useReactFlow();
@@ -33,7 +23,9 @@ export function TopBar() {
   const canRedo = useProject((s) => s.future.length > 0);
   const errors = useIssues((s) => s.errors);
   const warnings = useIssues((s) => s.warnings);
-  const { theme, setTheme, bottomOpen, leftOpen, rightOpen, togglePanel, notify } = useUI();
+  const { theme, setTheme, bottomOpen, bottomTab, leftOpen, rightOpen, togglePanel, toggleBottom, notify } = useUI();
+  const problemsShown = bottomOpen && bottomTab === 'problems';
+  const promptShown = bottomOpen && bottomTab === 'prompt';
 
   const applyLoad = (result: LoadResult, label: string) => {
     if (!result.ok) {
@@ -58,7 +50,7 @@ export function TopBar() {
 
   const save = () => {
     const { meta, nodes, edges } = useProject.getState();
-    download(`${safeFileName(meta.name)}.dbb.json`, JSON.stringify(toFile(meta, nodes, edges), null, 2));
+    downloadText(`${safeFileName(meta.name)}.dbb.json`, JSON.stringify(toFile(meta, nodes, edges), null, 2), 'application/json');
   };
 
   const newProject = () => {
@@ -108,10 +100,10 @@ export function TopBar() {
       <div className="ml-auto flex items-center gap-1">
         <button
           type="button"
-          onClick={() => useUI.getState().setBottomOpen(!bottomOpen)}
-          aria-pressed={bottomOpen}
+          onClick={() => toggleBottom('problems')}
+          aria-pressed={problemsShown}
           aria-label={`문제: 오류 ${errors}개, 경고 ${warnings}개`}
-          className={cx('inline-flex h-8 items-center gap-2.5 rounded-md px-2.5 text-sm hover:bg-hover', bottomOpen && 'bg-hover')}
+          className={cx('inline-flex h-8 items-center gap-2.5 rounded-md px-2.5 text-sm hover:bg-hover', problemsShown && 'bg-hover')}
         >
           {errors + warnings === 0 ? (
             <span className="inline-flex items-center gap-1 text-fg-muted">
@@ -146,6 +138,9 @@ export function TopBar() {
           }))}
         />
         <IconButton icon={PanelRight} label={rightOpen ? '속성 패널 닫기' : '속성 패널 열기'} aria-pressed={rightOpen} onClick={() => togglePanel('right')} />
+        <Button variant="primary" icon={ScrollText} aria-pressed={promptShown} onClick={() => toggleBottom('prompt')} className="ml-1">
+          <span className="max-sm:sr-only">프롬프트</span>
+        </Button>
       </div>
     </header>
   );
