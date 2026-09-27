@@ -4,7 +4,7 @@ import type { PromptMode } from '../compiler/compile';
 import { debouncedLocalStorage } from './storage';
 
 export type Theme = 'system' | 'dark' | 'light';
-export type BottomTab = 'simulate' | 'generate' | 'prompt' | 'problems';
+export type BottomTab = 'simulate' | 'generate' | 'prompt' | 'bot' | 'problems';
 
 export const BOTTOM_MIN = 160;
 export const BOTTOM_DEFAULT = 320;

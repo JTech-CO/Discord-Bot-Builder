@@ -141,7 +141,7 @@ export function TopBar() {
         />
         <IconButton icon={PanelRight} label={rightOpen ? '속성 패널 닫기' : '속성 패널 열기'} aria-pressed={rightOpen} onClick={() => togglePanel('right')} />
         <Button icon={Play} aria-pressed={simulateShown} onClick={() => toggleBottom('simulate')} className="ml-1">
-          <span className="max-sm:sr-only">실행</span>
+          <span className="max-sm:sr-only">테스트</span>
         </Button>
         <Button icon={ScrollText} aria-pressed={promptShown} onClick={() => toggleBottom('prompt')}>
           <span className="max-sm:sr-only">프롬프트</span>

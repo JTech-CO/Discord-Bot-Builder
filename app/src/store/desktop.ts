@@ -1,0 +1,168 @@
+import { create } from 'zustand';
+import { desktop } from '../platform';
+import type { BotLogLine, BotState, NodeInfo } from '../platform/api';
+import { useGeneration } from './generation';
+import { useUI } from './ui';
+
+const DIR_KEY = 'dbb:bot-dir';
+const MAX_LOG_LINES = 2000;
+
+interface DesktopState {
+  node: NodeInfo | null;
+  dir: string | null;
+  /** Env var names that have an encrypted value stored for `dir`. */
+  envSet: string[];
+  bot: BotState;
+  logs: BotLogLine[];
+  refresh: () => Promise<void>;
+  chooseAndSave: () => Promise<void>;
+  saveAgain: () => Promise<void>;
+  setEnv: (name: string, value: string) => Promise<void>;
+  clearEnv: (name: string) => Promise<void>;
+  start: () => Promise<void>;
+  stop: () => Promise<void>;
+  clearLogs: () => void;
+}
+
+const readDir = () => {
+  try {
+    return localStorage.getItem(DIR_KEY);
+  } catch {
+    return null;
+  }
+};
+
+const writeDir = (dir: string) => {
+  try {
+    localStorage.setItem(DIR_KEY, dir);
+  } catch {
+    // ignore
+  }
+};
+
+/** Env var names the generated project expects, read from its .env.example. */
+export function requiredEnv(): string[] {
+  const example = useGeneration.getState().result?.files.find((f) => f.path === '.env.example')?.content ?? '';
+  return [...new Set([...example.matchAll(/^\s*([A-Z][A-Z0-9_]{0,63})\s*=/gm)].map((m) => m[1]))];
+}
+
+function dependencies(): string[] {
+  const pkg = useGeneration.getState().result?.files.find((f) => f.path === 'package.json')?.content;
+  try {
+    const json = JSON.parse(pkg ?? '{}') as { dependencies?: Record<string, string>; devDependencies?: Record<string, string> };
+    return Object.entries({ ...json.dependencies, ...json.devDependencies }).map(([n, v]) => `${n}@${v}`);
+  } catch {
+    return [];
+  }
+}
+
+const fail = (err: unknown) => useUI.getState().notify(err instanceof Error ? err.message.replace(/^Error invoking remote method '[^']+': (Error: )?/, '') : String(err), 'error');
+
+export const useDesktop = create<DesktopState>((set, get) => ({
+  node: null,
+  dir: readDir(),
+  envSet: [],
+  bot: { status: 'idle', dir: null },
+  logs: [],
+
+  refresh: async () => {
+    if (!desktop) return;
+    const [node, bot] = await Promise.all([desktop.bot.node(), desktop.bot.state()]);
+    set({ node, bot });
+    const dir = get().dir;
+    if (!dir) return;
+    try {
+      set({ envSet: await desktop.env.names(dir) });
+    } catch {
+      set({ dir: null, envSet: [] }); // folder no longer approved (e.g. app data reset)
+    }
+  },
+
+  chooseAndSave: async () => {
+    const result = useGeneration.getState().result;
+    if (!desktop || !result) return;
+    try {
+      const dir = await desktop.project.chooseFolder(result.projectName);
+      if (!dir) return;
+      const { entries } = await desktop.project.inspect(dir);
+      if (entries > 0 && !window.confirm(`이 폴더에 이미 항목이 ${entries}개 있습니다. 같은 이름의 파일은 덮어씁니다. 계속할까요?\n\n${dir}`)) return;
+      const { written } = await desktop.project.write(dir, result.files);
+      writeDir(dir);
+      set({ dir, envSet: await desktop.env.names(dir) });
+      useUI.getState().notify(`파일 ${written}개를 저장했습니다.`);
+    } catch (err) {
+      fail(err);
+    }
+  },
+
+  saveAgain: async () => {
+    const { dir } = get();
+    const result = useGeneration.getState().result;
+    if (!desktop || !dir || !result) return;
+    try {
+      const { written } = await desktop.project.write(dir, result.files);
+      useUI.getState().notify(`최신 결과로 파일 ${written}개를 다시 저장했습니다.`);
+    } catch (err) {
+      fail(err);
+    }
+  },
+
+  setEnv: async (name, value) => {
+    const { dir } = get();
+    if (!desktop || !dir) return;
+    try {
+      await desktop.env.set(dir, name, value);
+      set({ envSet: await desktop.env.names(dir) });
+    } catch (err) {
+      fail(err);
+    }
+  },
+
+  clearEnv: async (name) => {
+    const { dir } = get();
+    if (!desktop || !dir) return;
+    try {
+      await desktop.env.clear(dir, name);
+      set({ envSet: await desktop.env.names(dir) });
+    } catch (err) {
+      fail(err);
+    }
+  },
+
+  start: async () => {
+    const { dir, envSet } = get();
+    if (!desktop || !dir) return;
+    const missing = requiredEnv().filter((n) => !envSet.includes(n));
+    if (missing.length) {
+      useUI.getState().notify(`필요한 값이 비어 있습니다: ${missing.join(', ')}`, 'error');
+      return;
+    }
+    const deps = dependencies();
+    const ok = window.confirm(
+      'AI가 만든 코드를 이 PC에서 실행합니다. 이 코드는 사용자 계정 권한으로 동작하므로, 처음 실행하기 전에 코드를 한 번 살펴보세요.\n\n' +
+        `설치할 패키지 (설치 스크립트는 실행하지 않음):\n${deps.length ? deps.map((d) => `· ${d}`).join('\n') : '· (package.json을 읽지 못함)'}\n\n계속할까요?`,
+    );
+    if (!ok) return;
+    set({ logs: [] });
+    try {
+      await desktop.bot.start(dir);
+    } catch (err) {
+      fail(err);
+    }
+  },
+
+  stop: async () => {
+    try {
+      await desktop?.bot.stop();
+    } catch (err) {
+      fail(err);
+    }
+  },
+
+  clearLogs: () => set({ logs: [] }),
+}));
+
+if (desktop) {
+  desktop.bot.onState((bot) => useDesktop.setState({ bot }));
+  desktop.bot.onLog((line) => useDesktop.setState((s) => ({ logs: [...s.logs.slice(-(MAX_LOG_LINES - 1)), line] })));
+}

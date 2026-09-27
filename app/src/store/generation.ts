@@ -1,10 +1,11 @@
 import { z } from 'zod';
 import { create } from 'zustand';
-import type { GenerationErrorKind, GenerationProgress } from '../ai/generate';
+import type { GenerationErrorKind, GenerationProgress, GenerationResult } from '../ai/generate';
 import { useApiKey } from '../ai/key';
 import { DEFAULT_MODEL, MODELS, type ModelId } from '../ai/models';
 import { checkOutput, isSafePath } from '../ai/output';
 import { compilePrompt } from '../compiler/compile';
+import { desktop } from '../platform';
 import { useIssues } from './issues';
 import { useProject } from './project';
 
@@ -68,6 +69,18 @@ let controller: AbortController | null = null;
 // Each run gets an id; results from a cancelled or superseded run are ignored.
 let runId = 0;
 
+/** Desktop: the main process holds the key and makes the call; progress arrives over IPC. */
+async function generateOnDesktop(model: ModelId, prompt: string, onProgress: (p: GenerationProgress) => void): Promise<GenerationResult> {
+  const off = desktop!.ai.onProgress(onProgress);
+  try {
+    const res = await desktop!.ai.generate({ model, prompt });
+    if (!res.ok) throw { kind: res.kind, message: res.message };
+    return res.result;
+  } finally {
+    off();
+  }
+}
+
 const isGenerationError = (e: unknown): e is { kind: GenerationErrorKind; message: string } =>
   typeof e === 'object' && e !== null && 'kind' in e && 'message' in e;
 
@@ -89,7 +102,7 @@ export const useGeneration = create<GenerationState>((set, get) => ({
   start: async () => {
     if (get().status === 'running') return;
     const apiKey = useApiKey.getState().key;
-    if (!apiKey) {
+    if (desktop ? !useApiKey.getState().label : !apiKey) {
       set({ error: { kind: 'no_key', message: 'Anthropic API 키를 먼저 입력해 주세요.' } });
       return;
     }
@@ -110,14 +123,12 @@ export const useGeneration = create<GenerationState>((set, get) => ({
     set({ status: 'running', error: null, progress: { chars: 0, files: 0, current: null } });
 
     try {
-      const { generateProject } = await import('../ai/generate');
-      const r = await generateProject({
-        apiKey,
-        model,
-        prompt: compiled.text,
-        signal: controller.signal,
-        onProgress: (progress) => id === runId && set({ progress }),
-      });
+      const onProgress = (progress: GenerationProgress) => id === runId && set({ progress });
+      const r = desktop
+        ? await generateOnDesktop(model, compiled.text, onProgress)
+        : await (await import('../ai/generate')).generateProject({
+            runtime: 'browser', apiKey: apiKey!, model, prompt: compiled.text, signal: controller.signal, onProgress,
+          });
       if (id !== runId) return;
       const checked = checkOutput(r.output, compiled.requirements.env.map((e) => e.name));
       const record: GenerationRecord = {
@@ -144,6 +155,7 @@ export const useGeneration = create<GenerationState>((set, get) => ({
   cancel: () => {
     if (!controller) return;
     controller.abort();
+    if (desktop) void desktop.ai.cancel();
     controller = null;
     runId++;
     // Return to the previous state right away; the aborted request finishes in the background.
