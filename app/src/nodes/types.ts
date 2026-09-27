@@ -266,6 +266,8 @@ export interface NodeDef {
   simulateTrigger?: (props: Props, input: SimInputs, graph: GraphView) => TriggerSimResult;
   /** Other nodes: what the step does in the simulator. */
   simulate?: (ctx: SimContext) => SimResult;
+  /** For the flow-drafting AI: how outputs or ports depend on props, when they do. */
+  draftHint?: string;
 }
 
 export const NEXT_PORT: PortDef = { id: 'next', label: '' };

@@ -3,12 +3,14 @@ import { mkdirSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { z } from 'zod';
+import { draftFlow } from '../src/ai/draft';
+import { MAX_DESCRIPTION } from '../src/ai/draftSpec';
 import { GenerationError, generateProject } from '../src/ai/generate';
 import { KEY_PATTERN, maskKey } from '../src/ai/keyFormat';
 import { MODELS } from '../src/ai/models';
 import { projectSlug } from '../src/ai/zip';
 import { ENV_NAME } from '../src/nodes/helpers';
-import type { DesktopGenerateResult } from '../src/platform/api';
+import type { DesktopDraftResult, DesktopGenerateResult } from '../src/platform/api';
 import { inspectFolder, writeProject } from './files';
 import { BotRunner } from './runner';
 import { runSmoke } from './smoke';
@@ -79,7 +81,38 @@ handle(
     }
   },
 );
-handle('ai:cancel', None, () => generation?.abort());
+let drafting: AbortController | null = null;
+handle(
+  'ai:draft',
+  z.object({
+    model: z.enum(MODELS.map((m) => m.id) as [string, ...string[]]),
+    description: z.string().min(1).max(MAX_DESCRIPTION),
+    locale: z.enum(['ko', 'en']),
+  }),
+  async ({ model, description, locale }): Promise<DesktopDraftResult> => {
+    const apiKey = store.apiKey();
+    if (!apiKey) return { ok: false, kind: 'auth', message: 'Anthropic API 키를 먼저 입력해 주세요.' };
+    drafting?.abort();
+    const controller = new AbortController();
+    drafting = controller;
+    try {
+      const result = await draftFlow({
+        runtime: 'node', apiKey, model: model as (typeof MODELS)[number]['id'], description, locale: locale as 'ko' | 'en', signal: controller.signal,
+      });
+      return { ok: true, result };
+    } catch (err) {
+      if (err instanceof GenerationError) return { ok: false, kind: err.kind, message: err.message };
+      return { ok: false, kind: 'unknown', message: err instanceof Error ? err.message : String(err) };
+    } finally {
+      if (drafting === controller) drafting = null;
+    }
+  },
+);
+
+handle('ai:cancel', None, () => {
+  generation?.abort();
+  drafting?.abort();
+});
 
 handle('project:chooseFolder', z.string().max(100), async (name) => {
   const parent = join(app.getPath('documents'), 'Discord Bot Builder');

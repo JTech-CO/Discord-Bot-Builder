@@ -98,6 +98,7 @@ export const slashCommand: NodeDef = {
     if (missing.length) return { matched: false, outputs, log: `필수 옵션(${missing.join(', ')})이 비어 있으면 디스코드가 명령어를 보내지 않습니다.` };
     return { matched: true, outputs, log: `${u.name}님이 /${str(p, 'name')} 명령어를 입력했습니다.` };
   },
+  draftHint: 'Each option adds an output opt_<option name> (for example opt_면).',
   spec: (p, f) => {
     const opts = rows(p, 'options').filter((o) => o.name);
     const options = opts.length
@@ -245,6 +246,7 @@ export const modalSubmit: NodeDef = {
     for (const [key, value] of Object.entries(input)) if (key.startsWith('field_')) outputs[key] = String(value);
     return { matched: true, outputs, log: `${u.name}님이 "${str(p, 'customId')}" 모달을 제출했습니다.` };
   },
+  draftHint: 'Outputs field_<input id> for every input of the action.showModal node with the same customId.',
   spec: (p, f) =>
     `Starts when a user submits the modal whose custom ID is ${f.text(str(p, 'customId'))}. Each text input's value is output field_<input id>.`,
   requires: () => ({ intents: ['Guilds'] }),

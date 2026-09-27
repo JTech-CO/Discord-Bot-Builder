@@ -19,6 +19,7 @@ const api: DesktopAPI = {
     setKey: (key) => invoke('ai:setKey', key),
     clearKey: () => invoke('ai:clearKey'),
     generate: (req) => invoke('ai:generate', req),
+    draft: (req) => invoke('ai:draft', req),
     cancel: () => invoke('ai:cancel'),
     onProgress: subscribe('ai:progress'),
   },

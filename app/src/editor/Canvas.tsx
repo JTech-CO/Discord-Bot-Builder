@@ -1,7 +1,7 @@
 import {
   Background, BackgroundVariant, MiniMap, Panel, ReactFlow, useReactFlow, type Node,
 } from '@xyflow/react';
-import { Maximize, Minus, Plus } from 'lucide-react';
+import { Maximize, Minus, Plus, Wand } from 'lucide-react';
 import { useCallback, useEffect, useMemo, type DragEvent } from 'react';
 import { diceExample } from '../flow/examples';
 import { fromFile } from '../flow/file';
@@ -12,6 +12,7 @@ import { useSimulator } from '../store/simulator';
 import { useUI } from '../store/ui';
 import { Button, IconButton } from '../ui/controls';
 import BotNodeCard, { prettyRefs } from './BotNodeCard';
+import { openDraft } from './DraftDialog';
 
 export const NODE_DRAG_MIME = 'application/x-dbb-node';
 export const NODE_WIDTH = 240;
@@ -97,6 +98,14 @@ function useSimulationPath() {
   }, [showing, run, active]);
 }
 
+function useFitRequests() {
+  const rf = useReactFlow();
+  const nonce = useUI((s) => s.fitNonce);
+  useEffect(() => {
+    if (nonce) requestAnimationFrame(() => rf.fitView({ padding: 0.2, duration: 200, maxZoom: 1 }));
+  }, [nonce, rf]);
+}
+
 function ZoomControls() {
   const rf = useReactFlow();
   return (
@@ -124,9 +133,10 @@ function EmptyState() {
           왼쪽 목록에서 <strong className="font-semibold text-fg">트리거</strong>를 끌어다 놓아 흐름을 시작하세요.
           노드를 클릭해도 화면 가운데에 추가됩니다.
         </p>
-        <Button variant="secondary" className="mt-4" onClick={loadExample}>
-          예제 불러오기: 주사위 봇
-        </Button>
+        <div className="mt-4 flex flex-wrap justify-center gap-2">
+          <Button variant="primary" icon={Wand} onClick={openDraft}>설명으로 초안 만들기</Button>
+          <Button variant="secondary" onClick={loadExample}>예제: 주사위 봇</Button>
+        </div>
       </div>
     </div>
   );
@@ -156,6 +166,7 @@ export function Canvas() {
 
   useEditorShortcuts();
   useFocusRequests();
+  useFitRequests();
 
   const onDragOver = useCallback((e: DragEvent) => {
     if (!e.dataTransfer.types.includes(NODE_DRAG_MIME)) return;

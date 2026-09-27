@@ -1,4 +1,5 @@
 // Contract between the Electron preload (window.dbb) and the renderer. Types only.
+import type { DraftResponse } from '../ai/draft';
 import type { GenerationErrorKind, GenerationProgress, GenerationResult } from '../ai/generate';
 import type { ModelId } from '../ai/models';
 
@@ -26,6 +27,10 @@ export type DesktopGenerateResult =
   | { ok: true; result: GenerationResult }
   | { ok: false; kind: GenerationErrorKind; message: string };
 
+export type DesktopDraftResult =
+  | { ok: true; result: DraftResponse }
+  | { ok: false; kind: GenerationErrorKind; message: string };
+
 export interface DesktopAPI {
   platform: string;
   ai: {
@@ -34,6 +39,7 @@ export interface DesktopAPI {
     setKey(key: string): Promise<string>;
     clearKey(): Promise<void>;
     generate(req: { model: ModelId; prompt: string }): Promise<DesktopGenerateResult>;
+    draft(req: { model: ModelId; description: string; locale: 'ko' | 'en' }): Promise<DesktopDraftResult>;
     cancel(): Promise<void>;
     onProgress(cb: (p: GenerationProgress) => void): () => void;
   };
