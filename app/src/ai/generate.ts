@@ -42,7 +42,7 @@ const SYSTEM =
   'working Discord bot project that a beginner can install and run. Follow the specification exactly.';
 
 // Server-side refusal fallbacks are documented for Claude Opus 5; other models run without them.
-const FALLBACK_MODELS = new Set<ModelId>(['claude-opus-5']);
+export const FALLBACK_MODELS = new Set<ModelId>(['claude-opus-5']);
 
 const PATH_IN_JSON = /"path"\s*:\s*"((?:[^"\\]|\\.)*)"/g;
 
@@ -56,7 +56,7 @@ function describeProgress(snapshot: string): GenerationProgress {
   return { chars: snapshot.length, files, current };
 }
 
-function toGenerationError(err: unknown): GenerationError {
+export function toGenerationError(err: unknown): GenerationError {
   if (err instanceof GenerationError) return err;
   if (err instanceof Anthropic.APIUserAbortError) return new GenerationError('aborted', '생성을 취소했습니다.');
   if (err instanceof Anthropic.AuthenticationError) return new GenerationError('auth', 'API 키가 올바르지 않거나 만료되었습니다. 키를 다시 확인해 주세요.');

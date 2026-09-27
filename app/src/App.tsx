@@ -2,6 +2,7 @@ import { ReactFlowProvider } from '@xyflow/react';
 import { X } from 'lucide-react';
 import { useEffect } from 'react';
 import { Canvas } from './editor/Canvas';
+import { DraftDialog } from './editor/DraftDialog';
 import { Inspector } from './editor/Inspector';
 import { KeyDialog } from './editor/KeyDialog';
 import { NodeLibrary } from './editor/NodeLibrary';
@@ -80,6 +81,7 @@ export default function App() {
         </div>
       </div>
       <KeyDialog />
+      <DraftDialog />
     </ReactFlowProvider>
   );
 }

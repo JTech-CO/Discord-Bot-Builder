@@ -1,7 +1,7 @@
 import { useReactFlow } from '@xyflow/react';
 import {
   ChevronDown, CircleAlert, CircleCheck, Download, FilePlus2, FolderOpen, Monitor, Moon, PanelLeft, PanelRight,
-  Hammer, Play, Redo2, ScrollText, Sun, TriangleAlert, Undo2, Workflow,
+  Hammer, Play, Redo2, ScrollText, Sun, TriangleAlert, Undo2, Wand, Workflow,
 } from 'lucide-react';
 import { useRef, type ChangeEvent } from 'react';
 import { diceExample } from '../flow/examples';
@@ -11,6 +11,7 @@ import { useProject } from '../store/project';
 import { useUI, type Theme } from '../store/ui';
 import { Button, IconButton, Menu, cx } from '../ui/controls';
 import { downloadText, safeFileName } from '../ui/files';
+import { openDraft } from './DraftDialog';
 
 const THEME_ICON = { system: Monitor, dark: Moon, light: Sun } as const;
 const THEME_LABEL = { system: '시스템 설정', dark: '어둡게', light: '밝게' } as const;
@@ -90,6 +91,8 @@ export function TopBar() {
           </button>
         )}
         items={[
+          { label: '설명으로 초안 만들기…', icon: Wand, onSelect: openDraft },
+          'divider',
           { label: '새 프로젝트', icon: FilePlus2, onSelect: newProject },
           { label: '파일 열기…', icon: FolderOpen, onSelect: () => fileInput.current?.click() },
           { label: '파일로 저장', icon: Download, onSelect: save },

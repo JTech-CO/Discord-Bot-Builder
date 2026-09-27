@@ -24,6 +24,10 @@ const PROBE = `(async () => {
       window.dbb.env.set('C:\\\\Windows', 'bad name', 'x'),
       window.dbb.bot.start('C:\\\\Windows'),
     ].map((p) => p.then(() => 'ALLOWED', () => 'refused'))),
+    // Without a key, drafting must answer with an auth error instead of calling the API.
+    draftWithoutKey: (await window.dbb.ai.keyLabel()) === null
+      ? await window.dbb.ai.draft({ model: 'claude-opus-5', description: 'x', locale: 'ko' }).then((r) => r.ok ? 'CALLED' : r.kind)
+      : 'skipped (a key is stored)',
     // Round-trip through the OS keychain, only when no real key is stored.
     keyRoundTrip: (await window.dbb.ai.keyLabel()) === null
       ? await window.dbb.ai.setKey('sk-ant-' + 'x'.repeat(30)).then(async (label) => {

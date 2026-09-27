@@ -28,6 +28,11 @@ interface UIState {
   notice: Notice | null;
   keyDialogOpen: boolean;
   setKeyDialogOpen: (open: boolean) => void;
+  draftOpen: boolean;
+  setDraftOpen: (open: boolean) => void;
+  /** Bumped to ask the canvas to fit all nodes in view. */
+  fitNonce: number;
+  requestFit: () => void;
   setTheme: (t: Theme) => void;
   togglePanel: (side: 'left' | 'right') => void;
   setBottomOpen: (open: boolean) => void;
@@ -57,6 +62,10 @@ export const useUI = create<UIState>()(
       notice: null,
       keyDialogOpen: false,
       setKeyDialogOpen: (keyDialogOpen) => set({ keyDialogOpen }),
+      draftOpen: false,
+      setDraftOpen: (draftOpen) => set({ draftOpen }),
+      fitNonce: 0,
+      requestFit: () => set((s) => ({ fitNonce: s.fitNonce + 1 })),
       setTheme: (theme) => set({ theme }),
       togglePanel: (side) => set((s) => (side === 'left' ? { leftOpen: !s.leftOpen } : { rightOpen: !s.rightOpen })),
       setBottomOpen: (bottomOpen) => set({ bottomOpen }),

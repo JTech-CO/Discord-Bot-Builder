@@ -86,6 +86,7 @@ export const switchCase: NodeDef = {
     const i = cases.findIndex((x) => x.trim().toLowerCase() === v);
     return { port: i >= 0 ? `case-${i}` : 'default', log: i >= 0 ? `${JSON.stringify(v)} → "${cases[i]}" 경우` : `${JSON.stringify(v)} → 맞는 경우가 없어 "그 외"` };
   },
+  draftHint: 'Ports are case-0, case-1, … (one per entry of cases, in order) and then default.',
   spec: (p, f) => {
     const cases = list(p, 'cases').map((c, i) => `"case-${i}" when it equals ${f.text(c)}`).join('; ');
     return `Compare ${f.text(p.value)} (trimmed, case-insensitive) with the cases in order and take the first match: ${cases}. If none match, take exit "default".`;

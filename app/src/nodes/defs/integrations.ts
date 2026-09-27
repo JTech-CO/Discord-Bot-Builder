@@ -45,6 +45,7 @@ export const http: NodeDef = {
     outputs: { status: 200, data: { mock: true }, ...(str(c.props, 'extract') ? { value: '(모의 값)' } : {}) },
     log: `${str(c.props, 'method') || 'GET'} ${c.text('url')} 요청이 성공했다고 가정합니다. (실제로 보내지 않음)`,
   }),
+  draftHint: 'Output value exists only when extract is set.',
   spec: (p, f) => {
     const method = str(p, 'method') || 'GET';
     const headers = rows(p, 'headers').filter((h) => h.name).map((h) => `${f.text(h.name)}: ${f.text(h.value)}`).join(', ');

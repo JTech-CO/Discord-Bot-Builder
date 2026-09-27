@@ -46,6 +46,7 @@ export const instruction: NodeDef = {
     }
     return { outputs, log: 'AI에게 맡긴 동작은 시뮬레이터에서 실행하지 않고 모의 값을 냈습니다.' };
   },
+  draftHint: 'Outputs are exactly the keys listed in the outputs table.',
   spec: (p, f) => {
     const outs = rows(p, 'outputs').filter((r) => r.key);
     const produce = outs.length

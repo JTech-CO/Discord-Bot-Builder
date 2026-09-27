@@ -1,11 +1,12 @@
 import { useReactFlow } from '@xyflow/react';
-import { Search } from 'lucide-react';
+import { Search, Wand } from 'lucide-react';
 import { useState } from 'react';
 import { CATEGORIES, categoryColor, defsByCategory } from '../nodes/registry';
 import type { NodeDef } from '../nodes/types';
 import { useProject } from '../store/project';
 import { useUI } from '../store/ui';
 import { NODE_DRAG_MIME, NODE_WIDTH } from './Canvas';
+import { openDraft } from './DraftDialog';
 
 const matches = (d: NodeDef, q: string) =>
   !q || d.label.toLowerCase().includes(q) || d.description.toLowerCase().includes(q) || d.type.toLowerCase().includes(q);
@@ -32,7 +33,14 @@ export function NodeLibrary() {
 
   return (
     <aside aria-label="노드 목록" className="flex h-full min-h-0 flex-col border-r border-line bg-panel">
-      <div className="p-3">
+      <div className="space-y-2 p-3">
+        <button
+          type="button"
+          onClick={openDraft}
+          className="flex h-8 w-full items-center justify-center gap-1.5 rounded-md border border-line text-sm text-fg hover:border-line-strong hover:bg-hover"
+        >
+          <Wand size={15} strokeWidth={1.75} aria-hidden /> 설명으로 초안 만들기
+        </button>
         <label className="relative block">
           <span className="sr-only">노드 검색</span>
           <Search size={15} strokeWidth={1.75} className="pointer-events-none absolute top-1/2 left-2.5 -translate-y-1/2 text-fg-subtle" aria-hidden />
