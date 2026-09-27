@@ -2,12 +2,8 @@ import { defineConfig, type Plugin } from 'vite';
 import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
 
-// AI provider endpoints the web build may call directly with the user's own key.
-const AI_ORIGINS = [
-  'https://api.anthropic.com',
-  'https://generativelanguage.googleapis.com',
-  'https://api.openai.com',
-];
+// The only external endpoint the web build calls, with the user's own key.
+const AI_ORIGINS = ['https://api.anthropic.com'];
 
 const CSP = [
   "default-src 'self'",

@@ -4,7 +4,7 @@ import type { PromptMode } from '../compiler/compile';
 import { debouncedLocalStorage } from './storage';
 
 export type Theme = 'system' | 'dark' | 'light';
-export type BottomTab = 'problems' | 'prompt';
+export type BottomTab = 'generate' | 'prompt' | 'problems';
 
 export const BOTTOM_MIN = 160;
 export const BOTTOM_DEFAULT = 320;
@@ -26,6 +26,8 @@ interface UIState {
   /** Bumped to ask the canvas to pan to a node. */
   focusRequest: { nodeId: string; nonce: number } | null;
   notice: Notice | null;
+  keyDialogOpen: boolean;
+  setKeyDialogOpen: (open: boolean) => void;
   setTheme: (t: Theme) => void;
   togglePanel: (side: 'left' | 'right') => void;
   setBottomOpen: (open: boolean) => void;
@@ -53,6 +55,8 @@ export const useUI = create<UIState>()(
       promptMode: 'agent',
       focusRequest: null,
       notice: null,
+      keyDialogOpen: false,
+      setKeyDialogOpen: (keyDialogOpen) => set({ keyDialogOpen }),
       setTheme: (theme) => set({ theme }),
       togglePanel: (side) => set((s) => (side === 'left' ? { leftOpen: !s.leftOpen } : { rightOpen: !s.rightOpen })),
       setBottomOpen: (bottomOpen) => set({ bottomOpen }),

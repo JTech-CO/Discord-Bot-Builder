@@ -7,7 +7,8 @@ import type { Intent, NodeDef, Permission, Requirements } from '../nodes/types';
 import { INTENT_ORDER, PERMISSION_BITS, PRIVILEGED_INTENTS, permissionBits } from './discord';
 import { specFormat as f } from './format';
 
-export type PromptMode = 'agent' | 'chat';
+/** agent/chat: copied into another tool by the user. api: sent by this app with structured output. */
+export type PromptMode = 'agent' | 'chat' | 'api';
 
 export interface EnvVar {
   name: string;
@@ -177,10 +178,12 @@ export function compilePrompt(meta: ProjectMeta, nodes: BotNode[], edges: BotEdg
     ...req.env.map((e) => `  - \`${e.name}\` — ${e.purpose}`),
   ].filter(Boolean);
 
-  const output =
-    mode === 'agent'
-      ? 'Create every file in the current working directory without asking for confirmation. Then run `npm install` and `npm run build`, and fix any errors until the build passes. Finish with a short summary of the setup steps.'
-      : `Reply with the complete contents of every file. For each file, write a line \`### path/to/file\` followed by one fenced code block containing the whole file. Never abbreviate or leave parts out. After the files, give short setup steps in ${language}.`;
+  const output = {
+    agent:
+      'Create every file in the current working directory without asking for confirmation. Then run `npm install` and `npm run build`, and fix any errors until the build passes. Finish with a short summary of the setup steps.',
+    chat: `Reply with the complete contents of every file. For each file, write a line \`### path/to/file\` followed by one fenced code block containing the whole file. Never abbreviate or leave parts out. After the files, give short setup steps in ${language}.`,
+    api: `Return the whole project in the required JSON format. \`files\` lists every file with its path relative to the project root (forward slashes) and its complete content; never abbreviate. \`notes\` holds short setup steps in ${language}. Do not include .env, node_modules, dist or lock files. You cannot run commands, so check that imports, types and package.json dependencies are consistent before answering.`,
+  }[mode];
 
   const text = `# Discord bot: ${f.text(meta.name)}
 

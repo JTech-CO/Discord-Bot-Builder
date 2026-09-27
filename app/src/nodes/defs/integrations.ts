@@ -3,7 +3,7 @@ import type { NodeDef } from '../types';
 import { ENV_NAME, clip, num, rows, str } from '../helpers';
 
 const AI_PROVIDERS: Record<string, { name: string; env: string; pkg: string; model?: string }> = {
-  anthropic: { name: 'Anthropic Claude', env: 'ANTHROPIC_API_KEY', pkg: '@anthropic-ai/sdk', model: 'claude-opus-5-5' },
+  anthropic: { name: 'Anthropic Claude', env: 'ANTHROPIC_API_KEY', pkg: '@anthropic-ai/sdk', model: 'claude-opus-5' },
   openai: { name: 'OpenAI', env: 'OPENAI_API_KEY', pkg: 'openai' },
   gemini: { name: 'Google Gemini', env: 'GEMINI_API_KEY', pkg: '@google/genai' },
 };
@@ -68,7 +68,7 @@ export const ai: NodeDef = {
         { value: 'gemini', label: 'Google Gemini' },
       ],
     },
-    { key: 'model', label: '모델', kind: 'text', maxLength: 100, placeholder: 'claude-opus-5-5', help: '비워 두면 제공자의 최신 권장 모델을 씁니다.' },
+    { key: 'model', label: '모델', kind: 'text', maxLength: 100, placeholder: 'claude-opus-5', help: '비워 두면 제공자의 최신 권장 모델을 씁니다.' },
     { key: 'system', label: '역할 지시', kind: 'textarea', maxLength: 4000, refs: true, placeholder: '너는 친절한 서버 도우미야.' },
     { key: 'prompt', label: '질문', kind: 'textarea', required: true, maxLength: 4000, refs: true, placeholder: '{{n1.content}}' },
     { key: 'maxLength', label: '답변 최대 길이(자)', kind: 'number', min: 50, max: 2000, default: 1500 },
