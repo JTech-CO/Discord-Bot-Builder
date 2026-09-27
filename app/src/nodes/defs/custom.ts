@@ -1,5 +1,5 @@
 import { NotebookPen } from 'lucide-react';
-import type { NodeDef, OutputDef, ValueType } from '../types';
+import type { NodeDef, OutputDef, SimValue, ValueType } from '../types';
 import { STORE_KEY, clip, oneOf, rows, safeKey, str } from '../helpers';
 
 const OUTPUT_TYPES = ['text', 'number', 'boolean', 'list'] as const;
@@ -38,6 +38,14 @@ export const instruction: NodeDef = {
       .filter((r) => typeof r.key === 'string' && r.key)
       .map((r): OutputDef => ({ key: String(r.key), label: String(r.description || r.key), type: oneOf<ValueType>(r.type, OUTPUT_TYPES, 'text') })),
   summary: (p) => clip(str(p, 'instruction') || '지시 없음', 44),
+  simulate: (c) => {
+    const outputs: Record<string, SimValue> = {};
+    for (const o of rows(c.props, 'outputs').filter((r) => r.key)) {
+      const type = oneOf(o.type, OUTPUT_TYPES, 'text');
+      outputs[String(o.key)] = type === 'number' ? 0 : type === 'boolean' ? false : type === 'list' ? [] : '(모의 값)';
+    }
+    return { outputs, log: 'AI에게 맡긴 동작은 시뮬레이터에서 실행하지 않고 모의 값을 냈습니다.' };
+  },
   spec: (p, f) => {
     const outs = rows(p, 'outputs').filter((r) => r.key);
     const produce = outs.length

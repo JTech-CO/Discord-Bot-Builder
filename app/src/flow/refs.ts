@@ -27,6 +27,10 @@ export function parseRefs(text: string): Ref[] {
   return refs;
 }
 
+/** Replaces every {{…}} token with what `fn` returns for its parsed reference. */
+export const replaceRefs = (text: string, fn: (ref: Ref) => string) =>
+  text.replace(TOKEN_RE, (raw) => fn(parseRefs(raw)[0] ?? { kind: 'invalid', raw }));
+
 export const nodeRef = (nodeId: string, key: string) => `{{${nodeId}.${key}}}`;
 
 /** True when the whole value is exactly one reference (used for type checks). */

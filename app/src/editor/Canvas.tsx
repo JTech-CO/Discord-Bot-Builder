@@ -8,6 +8,7 @@ import { fromFile } from '../flow/file';
 import { nodeNumber, type BotNode } from '../flow/model';
 import { getDef } from '../nodes/registry';
 import { useProject } from '../store/project';
+import { useSimulator } from '../store/simulator';
 import { useUI } from '../store/ui';
 import { Button, IconButton } from '../ui/controls';
 import BotNodeCard, { prettyRefs } from './BotNodeCard';
@@ -81,6 +82,21 @@ function useFocusRequests() {
   }, [request, rf]);
 }
 
+/** Nodes and edges of the last simulator run, while the simulator tab is showing. */
+function useSimulationPath() {
+  const showing = useUI((s) => s.bottomOpen && s.bottomTab === 'simulate');
+  const run = useSimulator((s) => s.run);
+  const active = useSimulator((s) => s.active);
+  return useMemo(() => {
+    if (!showing || !run) return null;
+    return {
+      nodes: new Set(run.steps.map((s) => s.nodeId)),
+      edges: new Set(run.edges),
+      active: active === null ? null : run.steps[active]?.nodeId ?? null,
+    };
+  }, [showing, run, active]);
+}
+
 function ZoomControls() {
   const rf = useReactFlow();
   return (
@@ -119,8 +135,19 @@ function EmptyState() {
 export function Canvas() {
   const rf = useReactFlow();
   const nodes = useProject((s) => s.nodes);
-  const rfNodes = useMemo(() => nodes.map(withAriaLabel), [nodes]);
   const edges = useProject((s) => s.edges);
+  const simPath = useSimulationPath();
+  const rfNodes = useMemo(() => {
+    const labeled = nodes.map(withAriaLabel);
+    if (!simPath) return labeled;
+    return labeled.map((n) =>
+      simPath.nodes.has(n.id) ? { ...n, className: n.id === simPath.active ? 'sim-visited sim-active' : 'sim-visited' } : n,
+    );
+  }, [nodes, simPath]);
+  const rfEdges = useMemo(
+    () => (simPath ? edges.map((e) => (simPath.edges.has(e.id) ? { ...e, className: 'sim-path' } : e)) : edges),
+    [edges, simPath],
+  );
   const onNodesChange = useProject((s) => s.onNodesChange);
   const onEdgesChange = useProject((s) => s.onEdgesChange);
   const connect = useProject((s) => s.connect);
@@ -152,7 +179,7 @@ export function Canvas() {
     <div className="relative h-full min-h-0" onDragOver={onDragOver} onDrop={onDrop}>
       <ReactFlow<BotNode>
         nodes={rfNodes}
-        edges={edges}
+        edges={rfEdges}
         nodeTypes={nodeTypes}
         defaultEdgeOptions={defaultEdgeOptions}
         onNodesChange={onNodesChange}

@@ -1,5 +1,6 @@
 import { AppWindow, Gavel, Hash, Send, Smile, Tags, Trash2 } from 'lucide-react';
 import type { CheckResult, NodeDef, Permission, Props, SpecFormat } from '../types';
+import { simChannel, simMessage, toText } from '../sim';
 import { CUSTOM_ID, OUT_CHANNEL, OUT_MESSAGE, SNOWFLAKE_OR_REF, bool, clip, is, num, oneOf, rows, str } from '../helpers';
 
 const BUTTON_STYLES = ['primary', 'secondary', 'success', 'danger'] as const;
@@ -82,6 +83,23 @@ export const sendMessage: NodeDef = {
     }
     return out;
   },
+  simulate: (c) => {
+    const target = str(c.props, 'target') || 'reply';
+    const to = target === 'channel' ? toText(c.value('channel')) : target === 'dm' ? `${toText(c.value('user'))} DM` : '답장';
+    const embed = bool(c.props, 'embed')
+      ? { title: c.text('embedTitle'), description: c.text('embedDescription'), color: str(c.props, 'embedColor') || '#5865F2', image: c.text('embedImage'), footer: c.text('embedFooter') }
+      : null;
+    const content = c.text('content');
+    return {
+      outputs: { message: simMessage(content || embed?.title || '임베드') },
+      effect: {
+        kind: 'message', to, content, embed,
+        ephemeral: target === 'reply' && bool(c.props, 'ephemeral'),
+        buttons: rows(c.props, 'buttons').map((b) => String(b.label ?? '')).filter(Boolean),
+      },
+      log: target === 'reply' ? '답장을 보냈습니다.' : `${to}(으)로 메시지를 보냈습니다.`,
+    };
+  },
   spec: (p, f) => {
     const target = {
       reply: `Reply to the interaction or message that started this flow${bool(p, 'ephemeral') ? ' as an ephemeral reply (only that user sees it; not possible for message-started flows, so reply normally there)' : ''}`,
@@ -148,6 +166,10 @@ export const showModal: NodeDef = {
     if (!id || graph.nodesOfType('trigger.modalSubmit').some((n) => str(n.props, 'customId') === id)) return [];
     return [{ level: 'warning', field: 'customId', message: `모달 "${id}"를 제출했을 때 시작할 "모달 제출" 트리거가 없습니다.` }];
   },
+  simulate: (c) => ({
+    effect: { kind: 'modal', title: c.text('title'), fields: rows(c.props, 'fields').map((f) => String(f.label || f.id || '')) },
+    log: '모달을 띄웠습니다. 제출하면 "모달 제출" 흐름이 따로 시작됩니다.',
+  }),
   spec: (p, f) => {
     const inputs = rows(p, 'fields')
       .map((x) => `${f.text(x.id)} labeled ${f.text(x.label)} (${x.style === 'paragraph' ? 'paragraph' : 'short'}, ${x.required === false ? 'optional' : 'required'})`)
@@ -175,6 +197,10 @@ export const role: NodeDef = {
     reasonField,
   ],
   summary: (p) => (str(p, 'operation') === 'remove' ? '역할 회수' : '역할 지급'),
+  simulate: (c) => {
+    const text = `${toText(c.value('member'))}에게 역할 ${toText(c.value('roleId'))}을(를) ${str(c.props, 'operation') === 'remove' ? '회수' : '지급'}했습니다.`;
+    return { effect: { kind: 'action', text }, log: text };
+  },
   spec: (p, f) => {
     const add = str(p, 'operation') !== 'remove';
     return `${add ? 'Give' : 'Remove'} role ${f.target(p.roleId)} ${add ? 'to' : 'from'} member ${f.target(p.member)}${reasonSpec(p, f)}. ${FAIL_SOFT}`;
@@ -215,6 +241,16 @@ export const moderate: NodeDef = {
     const minutes = (num(p, 'duration') ?? 0) * ({ minutes: 1, hours: 60, days: 1440 }[str(p, 'unit') || 'minutes'] ?? 1);
     return minutes > 40320 ? [{ level: 'error', field: 'duration', message: '타임아웃은 최대 28일까지 가능합니다.' }] : [];
   },
+  simulate: (c) => {
+    const who = toText(c.value('member'));
+    const unit = ({ minutes: '분', hours: '시간', days: '일' } as Record<string, string>)[str(c.props, 'unit') || 'minutes'];
+    const text = {
+      timeout: `${who}을(를) ${c.number('duration')}${unit} 동안 타임아웃했습니다.`,
+      kick: `${who}을(를) 추방했습니다.`,
+      ban: `${who}을(를) 차단했습니다.`,
+    }[str(c.props, 'operation') || 'timeout'] ?? '';
+    return { effect: { kind: 'action', text }, log: text };
+  },
   spec: (p, f) => {
     const who = f.target(p.member);
     const action = {
@@ -238,6 +274,10 @@ export const deleteMessage: NodeDef = {
   fields: [
     { key: 'message', label: '삭제할 메시지', kind: 'text', required: true, refs: ['message'], pattern: SNOWFLAKE_OR_REF },
   ],
+  simulate: (c) => {
+    const text = `메시지를 삭제했습니다 ${toText(c.value('message'))}.`;
+    return { effect: { kind: 'action', text }, log: text };
+  },
   spec: (p, f) => `Delete message ${f.target(p.message)}. If it is already gone, continue silently. ${FAIL_SOFT}`,
   requires: () => ({ permissions: ['ManageMessages'] }),
 };
@@ -253,6 +293,10 @@ export const react: NodeDef = {
     { key: 'emoji', label: '이모지', kind: 'text', required: true, maxLength: 64 },
   ],
   summary: (p) => str(p, 'emoji') || '이모지 없음',
+  simulate: (c) => {
+    const text = `${c.text('emoji')} 반응을 달았습니다.`;
+    return { effect: { kind: 'action', text }, log: text };
+  },
   spec: (p, f) => `Add the reaction ${f.text(p.emoji)} to message ${f.target(p.message)}. ${FAIL_SOFT}`,
   requires: () => ({ permissions: ['AddReactions', 'ReadMessageHistory'] }),
 };
@@ -278,6 +322,11 @@ export const createChannel: NodeDef = {
   ],
   outputs: () => [{ ...OUT_CHANNEL, label: '만든 채널' }],
   summary: (p) => clip(str(p, 'name') || '이름 없음'),
+  simulate: (c) => {
+    const channel = simChannel(c.text('name') || '새 채널');
+    const text = `${str(c.props, 'kind') === 'text' ? '텍스트 채널' : '스레드'} #${channel.name}을(를) 만들었습니다.`;
+    return { outputs: { channel }, effect: { kind: 'action', text }, log: text };
+  },
   spec: (p, f) => {
     const priv = bool(p, 'private');
     const made = str(p, 'kind') === 'text'
