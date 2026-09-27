@@ -1,8 +1,9 @@
-import { CircleAlert, FileCode2, FileText, Folder, Hammer, KeyRound, Loader2, PackageOpen, Square, TriangleAlert } from 'lucide-react';
+import { CircleAlert, FileCode2, FileText, Folder, Hammer, KeyRound, Loader2, MonitorPlay, PackageOpen, Square, TriangleAlert } from 'lucide-react';
 import { useMemo, type ReactNode } from 'react';
-import { maskKey, useApiKey } from '../ai/key';
+import { useApiKey } from '../ai/key';
 import { MAX_OUTPUT_TOKENS, MODELS, costUSD, formatUSD, modelInfo, type ModelId } from '../ai/models';
 import type { GeneratedFile } from '../ai/output';
+import { desktop } from '../platform';
 import { compilePrompt, estimateTokens } from '../compiler/compile';
 import { useGeneration, type GenerationRecord } from '../store/generation';
 import { useIssues } from '../store/issues';
@@ -23,7 +24,7 @@ async function downloadZip(record: GenerationRecord) {
 
 function Toolbar() {
   const { status, model, setModel, start, cancel, result } = useGeneration();
-  const key = useApiKey((s) => s.key);
+  const key = useApiKey((s) => s.label);
   const errors = useIssues((s) => s.errors);
   const rev = useIssues((s) => s.rev);
   const running = status === 'running';
@@ -59,10 +60,13 @@ function Toolbar() {
       </span>
       <div className="ml-auto flex items-center gap-2">
         <Button size="sm" variant="ghost" icon={KeyRound} onClick={() => useUI.getState().setKeyDialogOpen(true)}>
-          {key ? maskKey(key) : 'API 키 입력'}
+          {key ?? 'API 키 입력'}
         </Button>
         {result && !running && (
           <Button size="sm" icon={PackageOpen} onClick={() => downloadZip(result)}>zip 받기</Button>
+        )}
+        {desktop && result && !running && (
+          <Button size="sm" icon={MonitorPlay} onClick={() => useUI.getState().openBottom('bot')}>이 PC에서 실행</Button>
         )}
         {running ? (
           <Button size="sm" variant="danger" icon={Square} onClick={cancel}>취소</Button>
@@ -256,7 +260,7 @@ function Result({ record }: { record: GenerationRecord }) {
 }
 
 function EmptyState() {
-  const key = useApiKey((s) => s.key);
+  const key = useApiKey((s) => s.label);
   return (
     <div className="h-full overflow-y-auto p-4 text-sm text-fg-muted">
       <p className="max-w-prose">

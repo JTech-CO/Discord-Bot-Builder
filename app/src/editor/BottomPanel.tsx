@@ -4,6 +4,8 @@ import { useIssues } from '../store/issues';
 import { BOTTOM_MIN, useUI, type BottomTab } from '../store/ui';
 import { IconButton, cx } from '../ui/controls';
 import { ProblemsList } from './ProblemsPanel';
+import { desktop } from '../platform';
+import { BotRunView } from './BotRunView';
 import { GenerateView } from './GenerateView';
 import { PromptView } from './PromptView';
 import { SimulatorView } from './SimulatorView';
@@ -57,9 +59,10 @@ export function BottomPanel() {
   const warnings = useIssues((s) => s.warnings);
 
   const tabs: { id: BottomTab; label: string; badge?: number }[] = [
-    { id: 'simulate', label: '실행' },
+    { id: 'simulate', label: '테스트' },
     { id: 'prompt', label: '프롬프트' },
     { id: 'generate', label: '생성' },
+    ...(desktop ? [{ id: 'bot' as const, label: '봇 실행' }] : []),
     { id: 'problems', label: '문제', badge: errors + warnings },
   ];
 
@@ -90,7 +93,7 @@ export function BottomPanel() {
         <IconButton icon={X} label="하단 패널 닫기" className="ml-auto" onClick={() => useUI.getState().setBottomOpen(false)} />
       </div>
       <div role="tabpanel" id={`panel-${tab}`} aria-labelledby={`tab-${tab}`} className="min-h-0 flex-1">
-        {{ simulate: <SimulatorView />, generate: <GenerateView />, prompt: <PromptView />, problems: <ProblemsList /> }[tab]}
+        {{ simulate: <SimulatorView />, generate: <GenerateView />, prompt: <PromptView />, bot: desktop ? <BotRunView /> : <ProblemsList />, problems: <ProblemsList /> }[tab]}
       </div>
     </section>
   );

@@ -28,6 +28,8 @@ export interface GenerationResult {
 }
 
 interface GenerateOptions {
+  /** 'browser' for the web build (BYOK straight from the page), 'node' for the Electron main process. */
+  runtime: 'browser' | 'node';
   apiKey: string;
   model: ModelId;
   prompt: string;
@@ -67,9 +69,9 @@ function toGenerationError(err: unknown): GenerationError {
   return new GenerationError('unknown', err instanceof Error ? err.message : '알 수 없는 오류가 났습니다.');
 }
 
-export async function generateProject({ apiKey, model, prompt, signal, onProgress }: GenerateOptions): Promise<GenerationResult> {
-  // BYOK in the browser: the key belongs to the user and goes straight to api.anthropic.com.
-  const client = new Anthropic({ apiKey, dangerouslyAllowBrowser: true, maxRetries: 2 });
+export async function generateProject({ runtime, apiKey, model, prompt, signal, onProgress }: GenerateOptions): Promise<GenerationResult> {
+  // BYOK: the key belongs to the user and goes straight to api.anthropic.com.
+  const client = new Anthropic({ apiKey, maxRetries: 2, ...(runtime === 'browser' ? { dangerouslyAllowBrowser: true } : {}) });
   const fallback = FALLBACK_MODELS.has(model);
 
   try {
