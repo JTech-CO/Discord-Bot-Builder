@@ -4,6 +4,7 @@ import { useIssues } from '../store/issues';
 import { BOTTOM_MIN, useUI, type BottomTab } from '../store/ui';
 import { IconButton, cx } from '../ui/controls';
 import { ProblemsList } from './ProblemsPanel';
+import { GenerateView } from './GenerateView';
 import { PromptView } from './PromptView';
 
 const maxHeight = () => Math.round(window.innerHeight * 0.75);
@@ -55,6 +56,7 @@ export function BottomPanel() {
   const warnings = useIssues((s) => s.warnings);
 
   const tabs: { id: BottomTab; label: string; badge?: number }[] = [
+    { id: 'generate', label: '생성' },
     { id: 'prompt', label: '프롬프트' },
     { id: 'problems', label: '문제', badge: errors + warnings },
   ];
@@ -86,7 +88,7 @@ export function BottomPanel() {
         <IconButton icon={X} label="하단 패널 닫기" className="ml-auto" onClick={() => useUI.getState().setBottomOpen(false)} />
       </div>
       <div role="tabpanel" id={`panel-${tab}`} aria-labelledby={`tab-${tab}`} className="min-h-0 flex-1">
-        {tab === 'problems' ? <ProblemsList /> : <PromptView />}
+        {tab === 'generate' ? <GenerateView /> : tab === 'prompt' ? <PromptView /> : <ProblemsList />}
       </div>
     </section>
   );

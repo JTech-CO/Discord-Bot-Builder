@@ -3,6 +3,7 @@ import { X } from 'lucide-react';
 import { useEffect } from 'react';
 import { Canvas } from './editor/Canvas';
 import { Inspector } from './editor/Inspector';
+import { KeyDialog } from './editor/KeyDialog';
 import { NodeLibrary } from './editor/NodeLibrary';
 import { BottomPanel } from './editor/BottomPanel';
 import { TopBar } from './editor/TopBar';
@@ -78,6 +79,7 @@ export default function App() {
           {rightOpen && <div className={cx(side, 'right-0')}><Inspector /></div>}
         </div>
       </div>
+      <KeyDialog />
     </ReactFlowProvider>
   );
 }

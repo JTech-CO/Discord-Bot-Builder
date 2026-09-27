@@ -1,7 +1,7 @@
 import { useReactFlow } from '@xyflow/react';
 import {
   ChevronDown, CircleAlert, CircleCheck, Download, FilePlus2, FolderOpen, Monitor, Moon, PanelLeft, PanelRight,
-  Redo2, ScrollText, Sun, TriangleAlert, Undo2, Workflow,
+  Hammer, Redo2, ScrollText, Sun, TriangleAlert, Undo2, Workflow,
 } from 'lucide-react';
 import { useRef, type ChangeEvent } from 'react';
 import { diceExample } from '../flow/examples';
@@ -26,6 +26,7 @@ export function TopBar() {
   const { theme, setTheme, bottomOpen, bottomTab, leftOpen, rightOpen, togglePanel, toggleBottom, notify } = useUI();
   const problemsShown = bottomOpen && bottomTab === 'problems';
   const promptShown = bottomOpen && bottomTab === 'prompt';
+  const generateShown = bottomOpen && bottomTab === 'generate';
 
   const applyLoad = (result: LoadResult, label: string) => {
     if (!result.ok) {
@@ -138,8 +139,11 @@ export function TopBar() {
           }))}
         />
         <IconButton icon={PanelRight} label={rightOpen ? '속성 패널 닫기' : '속성 패널 열기'} aria-pressed={rightOpen} onClick={() => togglePanel('right')} />
-        <Button variant="primary" icon={ScrollText} aria-pressed={promptShown} onClick={() => toggleBottom('prompt')} className="ml-1">
+        <Button icon={ScrollText} aria-pressed={promptShown} onClick={() => toggleBottom('prompt')} className="ml-1">
           <span className="max-sm:sr-only">프롬프트</span>
+        </Button>
+        <Button variant="primary" icon={Hammer} aria-pressed={generateShown} onClick={() => toggleBottom('generate')}>
+          <span className="max-sm:sr-only">생성</span>
         </Button>
       </div>
     </header>
