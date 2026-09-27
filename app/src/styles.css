@@ -226,6 +226,21 @@ body {
   border-radius: 6px;
 }
 
+/* Simulator run path */
+.react-flow__node.sim-visited > div {
+  outline: 2px solid var(--success);
+  outline-offset: 2px;
+}
+
+.react-flow__node.sim-active > div {
+  outline: 3px solid var(--accent);
+}
+
+.react-flow__edge.sim-path .react-flow__edge-path {
+  stroke: var(--success);
+  stroke-width: 2.5;
+}
+
 .react-flow__minimap-node.mm-trigger { fill: var(--cat-trigger); }
 .react-flow__minimap-node.mm-action { fill: var(--cat-action); }
 .react-flow__minimap-node.mm-logic { fill: var(--cat-logic); }

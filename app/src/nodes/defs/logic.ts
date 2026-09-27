@@ -1,5 +1,6 @@
 import { Dices, Hourglass, Percent, ShieldCheck, Shuffle, Split, Timer, Waypoints } from 'lucide-react';
 import type { NodeDef } from '../types';
+import { compareValues } from '../sim';
 import { SNOWFLAKE_OR_REF, clip, is, list, num, str } from '../helpers';
 
 const OPERATOR_SPEC: Record<string, string> = {
@@ -45,6 +46,14 @@ export const ifElse: NodeDef = {
     const left = str(p, 'left') || '?';
     return clip(UNARY.has(op) ? `${left} ${comparatorLabel(op)}` : `${left} ${op} ${str(p, 'right') || '?'}`, 40);
   },
+  simulate: (c) => {
+    const op = str(c.props, 'operator') || '==';
+    const a = c.text('left');
+    const b = c.text('right');
+    const ok = compareValues(a, op, b);
+    const cond = UNARY.has(op) ? `${JSON.stringify(a)} ${comparatorLabel(op)}` : `${JSON.stringify(a)} ${op} ${JSON.stringify(b)}`;
+    return { port: ok ? 'true' : 'false', log: `${cond} → ${ok ? '맞음' : '아님'}` };
+  },
   spec: (p, f) => {
     const op = str(p, 'operator') || '==';
     const cond = UNARY.has(op) ? `${f.text(p.left)} ${OPERATOR_SPEC[op]}` : `${f.text(p.left)} ${OPERATOR_SPEC[op] ?? op} ${f.text(p.right)}`;
@@ -71,6 +80,12 @@ export const switchCase: NodeDef = {
     { id: 'default', label: '그 외' },
   ],
   summary: (p) => clip(str(p, 'value') || '?'),
+  simulate: (c) => {
+    const v = c.text('value').trim().toLowerCase();
+    const cases = list(c.props, 'cases');
+    const i = cases.findIndex((x) => x.trim().toLowerCase() === v);
+    return { port: i >= 0 ? `case-${i}` : 'default', log: i >= 0 ? `${JSON.stringify(v)} → "${cases[i]}" 경우` : `${JSON.stringify(v)} → 맞는 경우가 없어 "그 외"` };
+  },
   spec: (p, f) => {
     const cases = list(p, 'cases').map((c, i) => `"case-${i}" when it equals ${f.text(c)}`).join('; ');
     return `Compare ${f.text(p.value)} (trimmed, case-insensitive) with the cases in order and take the first match: ${cases}. If none match, take exit "default".`;
@@ -89,6 +104,11 @@ export const chance: NodeDef = {
     { id: 'fail', label: '실패' },
   ],
   summary: (p) => `${num(p, 'percent') ?? '?'}%`,
+  simulate: (c) => {
+    const pct = c.number('percent');
+    const ok = c.random() * 100 < pct;
+    return { port: ok ? 'success' : 'fail', log: `${pct}% 확률 → ${ok ? '성공' : '실패'}` };
+  },
   spec: (p) => `Take exit "success" with probability ${num(p, 'percent') ?? 50}%, otherwise exit "fail".`,
 };
 
@@ -111,6 +131,13 @@ export const random: NodeDef = {
       ? [{ level: 'error', field: 'max', message: '최댓값이 최솟값보다 작습니다.' }]
       : [];
   },
+  simulate: (c) => {
+    let min = Math.ceil(c.number('min'));
+    let max = Math.floor(c.number('max'));
+    if (min > max) [min, max] = [max, min];
+    const result = min + Math.floor(c.random() * (max - min + 1));
+    return { outputs: { result }, log: `${min}~${max} 중 ${result}이(가) 나왔습니다.` };
+  },
   spec: (p) => `Pick a uniformly random integer from ${num(p, 'min') ?? 1} to ${num(p, 'max') ?? 6}, inclusive, as output result.`,
 };
 
@@ -123,6 +150,11 @@ export const pick: NodeDef = {
   fields: [{ key: 'items', label: '항목', kind: 'list', required: true, maxItems: 100, maxLength: 500, placeholder: '대길' }],
   outputs: () => [{ key: 'result', label: '고른 항목', type: 'text' }],
   summary: (p) => `${list(p, 'items').length}개 중 하나`,
+  simulate: (c) => {
+    const items = list(c.props, 'items').filter((s) => s.trim());
+    const result = items.length ? items[Math.floor(c.random() * items.length)] : '';
+    return { outputs: { result }, log: items.length ? `${items.length}개 중 "${result}"을(를) 골랐습니다.` : '고를 항목이 없습니다.' };
+  },
   spec: (p, f) => `Pick one item uniformly at random from ${f.list(p.items)} as output result.`,
 };
 
@@ -144,6 +176,9 @@ export const wait: NodeDef = {
     },
   ],
   summary: (p) => `${num(p, 'duration') ?? '?'}${({ seconds: '초', minutes: '분', hours: '시간' })[str(p, 'unit')] ?? '초'}`,
+  simulate: (c) => ({
+    log: `${c.number('duration')}${({ seconds: '초', minutes: '분', hours: '시간' } as Record<string, string>)[str(c.props, 'unit') || 'seconds']} 기다립니다. (시뮬레이터에서는 건너뜀)`,
+  }),
   spec: (p) => `Wait ${num(p, 'duration') ?? 5} ${str(p, 'unit') || 'seconds'} without blocking other events, then continue.`,
   requires: () => ({ slow: true }),
 };
@@ -171,6 +206,19 @@ export const cooldown: NodeDef = {
   ],
   outputs: () => [{ key: 'remaining', label: '남은 시간(초)', type: 'number' }],
   summary: (p) => `${num(p, 'seconds') ?? '?'}초`,
+  simulate: (c) => {
+    const seconds = c.number('seconds') || 10;
+    const scope = str(c.props, 'scope') || 'user';
+    const key = `cooldown:${c.self}:${scope === 'user' ? c.user?.name ?? '?' : scope}`;
+    const last = c.store.get(key);
+    const now = c.now();
+    if (typeof last === 'number' && now - last < seconds * 1000) {
+      const remaining = Math.ceil((seconds * 1000 - (now - last)) / 1000);
+      return { port: 'blocked', outputs: { remaining }, log: `아직 쿨다운 중입니다. ${remaining}초 남았습니다.` };
+    }
+    c.store.set(key, now);
+    return { port: 'pass', outputs: { remaining: 0 }, log: `쿨다운을 통과했습니다. 다음 ${seconds}초 동안은 막힙니다.` };
+  },
   spec: (p) => {
     const s = num(p, 'seconds') ?? 10;
     const who = { user: 'the same user', server: 'anyone in the same server', global: 'anyone' }[str(p, 'scope') || 'user'];
@@ -203,6 +251,10 @@ export const permission: NodeDef = {
     { id: 'yes', label: '있음' },
     { id: 'no', label: '없음' },
   ],
+  simulate: (c) => {
+    const ok = c.input.admin === true;
+    return { port: ok ? 'yes' : 'no', log: `트리거 입력의 "관리자 권한 있음"이 ${ok ? '켜져 있어 있음' : '꺼져 있어 없음'}으로 판단했습니다.` };
+  },
   spec: (p, f) => {
     const check = str(p, 'check') || 'administrator';
     const what = check === 'hasRole'

@@ -41,6 +41,10 @@ export const http: NodeDef = {
     ...(str(p, 'extract') ? [{ key: 'value', label: '꺼낸 값', type: 'any' as const }] : []),
   ],
   summary: (p) => clip(`${str(p, 'method') || 'GET'} ${str(p, 'url') || 'URL 없음'}`, 40),
+  simulate: (c) => ({
+    outputs: { status: 200, data: { mock: true }, ...(str(c.props, 'extract') ? { value: '(모의 값)' } : {}) },
+    log: `${str(c.props, 'method') || 'GET'} ${c.text('url')} 요청이 성공했다고 가정합니다. (실제로 보내지 않음)`,
+  }),
   spec: (p, f) => {
     const method = str(p, 'method') || 'GET';
     const headers = rows(p, 'headers').filter((h) => h.name).map((h) => `${f.text(h.name)}: ${f.text(h.value)}`).join(', ');
@@ -75,6 +79,10 @@ export const ai: NodeDef = {
   ],
   outputs: () => [{ key: 'reply', label: 'AI 답변', type: 'text' }],
   summary: (p) => ({ anthropic: 'Claude', openai: 'OpenAI', gemini: 'Gemini' })[str(p, 'provider')] ?? 'Claude',
+  simulate: (c) => ({
+    outputs: { reply: `(모의 AI 답변) ${clip(c.text('prompt'), 40)}` },
+    log: 'AI 호출은 실제로 하지 않고 모의 답변을 썼습니다.',
+  }),
   spec: (p, f) => {
     const ai = provider(p);
     const model = str(p, 'model').trim() ? f.text(p.model) : ai.model ? f.text(ai.model) : "the provider's current recommended general model";
@@ -102,6 +110,10 @@ export const webhook: NodeDef = {
     { key: 'username', label: '보내는 이름', kind: 'text', maxLength: 80 },
   ],
   summary: (p) => str(p, 'urlEnv') || '환경변수 없음',
+  simulate: (c) => {
+    const text = `웹훅(${str(c.props, 'urlEnv')})으로 보냄: "${clip(c.text('content'), 60)}"`;
+    return { effect: { kind: 'action', text }, log: `${text} (실제로 보내지 않음)` };
+  },
   spec: (p, f) =>
     `POST a message to the webhook URL stored in environment variable ${f.text(p.urlEnv)} with content ${f.text(p.content)}${str(p, 'username').trim() ? ` and username ${f.text(p.username)}` : ''}, with all mentions disabled. Log failures and continue.`,
   requires: (p) => ({
@@ -131,6 +143,11 @@ export const rss: NodeDef = {
     { key: 'link', label: '글 링크', type: 'text' },
   ],
   summary: (p) => clip(str(p, 'url').replace(/^https?:\/\//, '') || 'URL 없음'),
+  simulate: () => ({
+    port: 'new',
+    outputs: { title: '(모의 새 글 제목)', link: 'https://example.com/post' },
+    log: '새 글이 있다고 가정했습니다. (피드를 실제로 읽지 않음)',
+  }),
   spec: (p, f) =>
     `Fetch the RSS or Atom feed at ${f.text(p.url)} (timeout 10 seconds). Persist the id (guid, else link) of the newest item this step has seen. If the feed has a newer item than the stored one, take exit "new" with outputs title and link of the newest item and store its id; otherwise take exit "none". On the very first run, store the newest item and take "none" so old posts are not announced. On fetch errors, log and take "none".`,
   requires: () => ({ slow: true, storage: true, packages: ['rss-parser'] }),

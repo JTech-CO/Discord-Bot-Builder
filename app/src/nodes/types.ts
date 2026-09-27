@@ -160,6 +160,74 @@ export interface Requirements {
   slow?: boolean;
 }
 
+// ── Simulation ────────────────────────────────────────
+
+/** A Discord object as the simulator fakes it. */
+export interface SimEntity {
+  kind: 'user' | 'member' | 'channel' | 'role' | 'message';
+  id: string;
+  name: string;
+}
+
+export type SimValue = string | number | boolean | null | SimEntity | SimValue[] | { [key: string]: SimValue };
+
+/** Something the user would see in Discord. */
+export type SimEffect =
+  | {
+      kind: 'message';
+      to: string;
+      content: string;
+      ephemeral: boolean;
+      embed: { title: string; description: string; color: string; image: string; footer: string } | null;
+      buttons: string[];
+    }
+  | { kind: 'modal'; title: string; fields: string[] }
+  | { kind: 'action'; text: string };
+
+export interface SimInputDef {
+  key: string;
+  label: string;
+  kind: 'text' | 'number' | 'boolean';
+  default: string | number | boolean;
+}
+
+export type SimInputs = Record<string, string | number | boolean>;
+
+/** What a step can read while the simulator runs it. */
+export interface SimContext {
+  self: string;
+  props: Props;
+  /** A text prop with {{refs}} replaced by values from earlier steps. */
+  text(key: string): string;
+  /** A prop holding one reference, as that value; otherwise the rendered text. */
+  value(key: string): SimValue;
+  /** A numeric prop (references resolved); anything unparsable is 0. */
+  number(key: string): number;
+  /** The fake event the user typed in. */
+  input: SimInputs;
+  /** Values kept between runs: stored data, cooldowns. */
+  store: Map<string, SimValue>;
+  /** The user who started the flow, if there is one. */
+  user: SimEntity | null;
+  random(): number;
+  now(): number;
+}
+
+export interface SimResult {
+  /** Exit to take. Defaults to the node's first port. */
+  port?: string;
+  outputs?: Record<string, SimValue>;
+  /** One line, in Korean, describing what happened. */
+  log: string;
+  effect?: SimEffect;
+}
+
+export interface TriggerSimResult {
+  matched: boolean;
+  outputs: Record<string, SimValue>;
+  log: string;
+}
+
 /** Renders prop values safely into the prompt. Implemented by the compiler. */
 export interface SpecFormat {
   /** A literal as a JSON string, with references normalized to {{#N.key}} and secrets redacted. */
@@ -192,6 +260,12 @@ export interface NodeDef {
   /** One English instruction describing exactly what this step does, for the code-generating AI. */
   spec: (props: Props, f: SpecFormat) => string;
   requires?: (props: Props) => Requirements;
+  /** Triggers: the fake event fields the simulator asks for. */
+  simInputs?: (props: Props, graph: GraphView) => SimInputDef[];
+  /** Triggers: whether the fake event starts the flow, and its outputs. */
+  simulateTrigger?: (props: Props, input: SimInputs, graph: GraphView) => TriggerSimResult;
+  /** Other nodes: what the step does in the simulator. */
+  simulate?: (ctx: SimContext) => SimResult;
 }
 
 export const NEXT_PORT: PortDef = { id: 'next', label: '' };
