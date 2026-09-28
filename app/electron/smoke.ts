@@ -26,7 +26,7 @@ const PROBE = `(async () => {
     ].map((p) => p.then(() => 'ALLOWED', () => 'refused'))),
     // Without a key, drafting must answer with an auth error instead of calling the API.
     draftWithoutKey: (await window.dbb.ai.keyLabel()) === null
-      ? await window.dbb.ai.draft({ model: 'claude-opus-5', description: 'x', locale: 'ko' }).then((r) => r.ok ? 'CALLED' : r.kind)
+      ? await window.dbb.ai.draft({ model: 'claude-opus-5-5', description: 'x', locale: 'ko' }).then((r) => r.ok ? 'CALLED' : r.kind)
       : 'skipped (a key is stored)',
     // Round-trip through the OS keychain, only when no real key is stored.
     keyRoundTrip: (await window.dbb.ai.keyLabel()) === null
@@ -41,7 +41,7 @@ const PROBE = `(async () => {
 
 // A small generated project so the "봇 실행" tab has something to show in screenshots.
 const SAMPLE = {
-  projectName: '주사위 봇', model: 'claude-opus-5', servedBy: null, createdAt: Date.now(), usage: { input: 2100, output: 3200 },
+  projectName: '주사위 봇', model: 'claude-opus-5-5', servedBy: null, createdAt: Date.now(), usage: { input: 2100, output: 3200 },
   files: [
     { path: 'package.json', content: '{"scripts":{"build":"tsc","start":"node dist/index.js"},"dependencies":{"discord.js":"^14.27.0","dotenv":"^17.0.0"}}' },
     { path: '.env.example', content: 'DISCORD_TOKEN=\nDISCORD_CLIENT_ID=\nDISCORD_GUILD_ID=\n' },

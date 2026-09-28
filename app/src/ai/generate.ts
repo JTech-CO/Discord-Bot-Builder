@@ -41,8 +41,8 @@ const SYSTEM =
   'You are an expert TypeScript and discord.js developer. From the specification you are given, you write a complete, ' +
   'working Discord bot project that a beginner can install and run. Follow the specification exactly.';
 
-// Server-side refusal fallbacks are documented for Claude Opus 5; other models run without them.
-export const FALLBACK_MODELS = new Set<ModelId>(['claude-opus-5']);
+// Server-side refusal fallbacks are documented for Claude Opus 5.5; other models run without them.
+export const FALLBACK_MODELS = new Set<ModelId>(['claude-opus-5-5']);
 
 const PATH_IN_JSON = /"path"\s*:\s*"((?:[^"\\]|\\.)*)"/g;
 
