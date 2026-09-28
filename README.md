@@ -48,7 +48,7 @@ npm run desktop          # 웹 빌드 후 데스크톱 앱 실행
 
 ## 앱 안 생성과 API 키
 
-생성 탭은 사용자 본인의 Anthropic API 키로 `claude-opus-5`(또는 `claude-sonnet-5`)를 호출합니다. 키는 브라우저에서 `api.anthropic.com`으로만 전송되며, 기본적으로 탭을 닫으면 잊습니다. "이 브라우저에 저장"을 켜면 localStorage에 남습니다. 거절된 요청은 서버 측 대체 모델(`fallbacks: "default"`)로 다시 실행됩니다.
+생성 탭은 사용자 본인의 Anthropic API 키로 `claude-opus-5-5`(또는 `claude-sonnet-5`)를 호출합니다. 키는 브라우저에서 `api.anthropic.com`으로만 전송되며, 기본적으로 탭을 닫으면 잊습니다. "이 브라우저에 저장"을 켜면 localStorage에 남습니다. 거절된 요청은 서버 측 대체 모델(`fallbacks: "default"`)로 다시 실행됩니다.
 
 ## 로드맵
 
