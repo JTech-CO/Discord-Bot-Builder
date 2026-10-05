@@ -6,26 +6,10 @@ import { EN } from './en';
 
 export type Lang = 'ko' | 'en';
 
-const KEY = 'dbb:lang';
-
-function stored(): Lang {
-  try {
-    return localStorage.getItem(KEY) === 'en' ? 'en' : 'ko';
-  } catch {
-    return 'ko'; // no storage (main process, private mode)
-  }
-}
-
+// Every launch starts in Korean; a switch to English lasts until the app or tab closes.
 export const useLang = create<{ lang: Lang; setLang: (lang: Lang) => void }>((set) => ({
-  lang: stored(),
-  setLang: (lang) => {
-    try {
-      localStorage.setItem(KEY, lang);
-    } catch {
-      // the choice still applies until the app closes
-    }
-    set({ lang });
-  },
+  lang: 'ko',
+  setLang: (lang) => set({ lang }),
 }));
 
 /** `ko` in the current UI language. `{0}`, `{1}`, … are replaced by `params` in order; null, undefined and false print nothing, as in JSX. */
