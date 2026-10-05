@@ -1,10 +1,11 @@
 import type { SimEntity, SimInputDef, SimInputs, SimValue } from './types';
+import { t } from '../i18n/t';
 
 // Fake Discord objects. IDs only need to be stable and snowflake-shaped.
-export const simUser = (name: string): SimEntity => ({ kind: 'user', id: '100000000000000001', name: name || '테스트유저' });
+export const simUser = (name: string): SimEntity => ({ kind: 'user', id: '100000000000000001', name: name || t('테스트유저') });
 export const asMember = (u: SimEntity): SimEntity => ({ ...u, kind: 'member' });
-export const simChannel = (name: string): SimEntity => ({ kind: 'channel', id: '200000000000000001', name: name || '일반' });
-export const simRole = (name: string): SimEntity => ({ kind: 'role', id: '300000000000000001', name: name || '역할' });
+export const simChannel = (name: string): SimEntity => ({ kind: 'channel', id: '200000000000000001', name: name || t('일반') });
+export const simRole = (name: string): SimEntity => ({ kind: 'role', id: '300000000000000001', name: name || t('역할') });
 export const simMessage = (text: string): SimEntity => ({
   kind: 'message', id: '400000000000000001', name: text.length > 30 ? `${text.slice(0, 29)}…` : text,
 });
@@ -29,7 +30,7 @@ export function toText(v: SimValue | undefined): string {
   if (Array.isArray(v)) return v.map(toText).join(', ');
   if (isEntity(v)) {
     if (v.kind === 'channel') return `#${v.name}`;
-    if (v.kind === 'message') return `(메시지: ${v.name})`;
+    if (v.kind === 'message') return t('(메시지: {0})', [v.name]);
     return `@${v.name}`;
   }
   return JSON.stringify(v);

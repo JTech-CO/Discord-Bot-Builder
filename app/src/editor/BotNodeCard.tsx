@@ -5,20 +5,20 @@ import { nodeNumber, type BotNode } from '../flow/model';
 import { categoryColor, categoryLabel, getDef, isTrigger, portsOf } from '../nodes/registry';
 import { useNodeIssues } from '../store/issues';
 import { cx } from '../ui/controls';
+import { t, useLang } from '../i18n/t';
 
 /** Shortens {{n3.result}} to #3.result and {{env.KEY}} to $KEY for display on the card. */
 export const prettyRefs = (s: string) =>
   s.replace(/\{\{\s*n(\d+)\.([^{}\s]+)\s*\}\}/g, '#$1.$2').replace(/\{\{\s*env\.([A-Z0-9_]+)\s*\}\}/g, '$$$1');
 
 function BotNodeCard({ id, data, selected }: NodeProps<BotNode>) {
+  useLang((s) => s.lang); // memoized by React Flow, so it re-renders itself on a language switch
   const def = getDef(data.type);
   const issues = useNodeIssues(id);
 
   if (!def) {
     return (
-      <div className="w-60 rounded-lg border border-danger bg-raised px-3 py-2.5 text-sm text-danger">
-        알 수 없는 노드: {data.type}
-      </div>
+      <div className="w-60 rounded-lg border border-danger bg-raised px-3 py-2.5 text-sm text-danger">{t('알 수 없는 노드: {0}', [data.type])}</div>
     );
   }
 
@@ -38,7 +38,7 @@ function BotNodeCard({ id, data, selected }: NodeProps<BotNode>) {
       )}
       style={{ boxShadow: `inset 3px 0 0 ${color}` }}
     >
-      {!isTrigger(def) && <Handle type="target" position={Position.Top} aria-label="입력" />}
+      {!isTrigger(def) && <Handle type="target" position={Position.Top} aria-label={t('입력')} />}
 
       <div className="py-2.5 pr-3 pl-4">
         <div className="flex items-center gap-1.5 text-xs text-fg-subtle">
@@ -47,14 +47,14 @@ function BotNodeCard({ id, data, selected }: NodeProps<BotNode>) {
           {errors > 0 && (
             <span className="ml-1 inline-flex items-center gap-0.5 text-danger" title={issues[0].message}>
               <CircleAlert size={13} strokeWidth={2} aria-hidden />
-              <span className="sr-only">오류</span>
+              <span className="sr-only">{t('오류')}</span>
               {errors}
             </span>
           )}
           {!errors && warnings > 0 && (
             <span className="ml-1 inline-flex items-center gap-0.5 text-warning" title={issues[0].message}>
               <TriangleAlert size={13} strokeWidth={2} aria-hidden />
-              <span className="sr-only">경고</span>
+              <span className="sr-only">{t('경고')}</span>
               {warnings}
             </span>
           )}
@@ -80,7 +80,7 @@ function BotNodeCard({ id, data, selected }: NodeProps<BotNode>) {
           id={p.id}
           type="source"
           position={Position.Bottom}
-          aria-label={p.label ? `출력: ${p.label}` : '출력'}
+          aria-label={p.label ? t('출력: {0}', [p.label]) : t('출력')}
           style={{ left: `${((i + 0.5) / ports.length) * 100}%` }}
         />
       ))}

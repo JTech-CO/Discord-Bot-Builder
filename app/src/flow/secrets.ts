@@ -1,3 +1,5 @@
+import { t } from '../i18n/t';
+
 /**
  * Credentials that must never end up in a project file or a prompt sent to an AI.
  * Authors should reference them as {{env.NAME}} instead.
@@ -19,7 +21,7 @@ export const REDACTED = '[REDACTED secret: move it to an environment variable]';
 export function findSecret(text: string): string | null {
   for (const { name, re } of PATTERNS) {
     re.lastIndex = 0;
-    if (re.test(text)) return name;
+    if (re.test(text)) return t(name);
   }
   return null;
 }

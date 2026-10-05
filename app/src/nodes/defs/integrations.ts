@@ -1,6 +1,7 @@
 import { Bot, Globe, Rss, Webhook } from 'lucide-react';
 import type { NodeDef } from '../types';
 import { ENV_NAME, clip, num, rows, str } from '../helpers';
+import { t } from '../../i18n/t';
 
 const AI_PROVIDERS: Record<string, { name: string; env: string; pkg: string; model?: string }> = {
   anthropic: { name: 'Anthropic Claude', env: 'ANTHROPIC_API_KEY', pkg: '@anthropic-ai/sdk', model: 'claude-opus-5-5' },
@@ -36,14 +37,14 @@ export const http: NodeDef = {
     { key: 'extract', label: '응답에서 꺼낼 값', kind: 'text', maxLength: 200, placeholder: 'data.items[0].name', help: '비워 두면 응답 전체를 씁니다.' },
   ],
   outputs: (p) => [
-    { key: 'status', label: '상태 코드', type: 'number' },
-    { key: 'data', label: '응답 데이터', type: 'object' },
-    ...(str(p, 'extract') ? [{ key: 'value', label: '꺼낸 값', type: 'any' as const }] : []),
+    { key: 'status', label: t('상태 코드'), type: 'number' },
+    { key: 'data', label: t('응답 데이터'), type: 'object' },
+    ...(str(p, 'extract') ? [{ key: 'value', label: t('꺼낸 값'), type: 'any' as const }] : []),
   ],
-  summary: (p) => clip(`${str(p, 'method') || 'GET'} ${str(p, 'url') || 'URL 없음'}`, 40),
+  summary: (p) => clip(`${str(p, 'method') || 'GET'} ${str(p, 'url') || t('URL 없음')}`, 40),
   simulate: (c) => ({
-    outputs: { status: 200, data: { mock: true }, ...(str(c.props, 'extract') ? { value: '(모의 값)' } : {}) },
-    log: `${str(c.props, 'method') || 'GET'} ${c.text('url')} 요청이 성공했다고 가정합니다. (실제로 보내지 않음)`,
+    outputs: { status: 200, data: { mock: true }, ...(str(c.props, 'extract') ? { value: t('(모의 값)') } : {}) },
+    log: t('{0} {1} 요청이 성공했다고 가정합니다. (실제로 보내지 않음)', [str(c.props, 'method') || 'GET', c.text('url')]),
   }),
   draftHint: 'Output value exists only when extract is set.',
   spec: (p, f) => {
@@ -78,11 +79,11 @@ export const ai: NodeDef = {
     { key: 'prompt', label: '질문', kind: 'textarea', required: true, maxLength: 4000, refs: true, placeholder: '{{n1.content}}' },
     { key: 'maxLength', label: '답변 최대 길이(자)', kind: 'number', min: 50, max: 2000, default: 1500 },
   ],
-  outputs: () => [{ key: 'reply', label: 'AI 답변', type: 'text' }],
+  outputs: () => [{ key: 'reply', label: t('AI 답변'), type: 'text' }],
   summary: (p) => ({ anthropic: 'Claude', openai: 'OpenAI', gemini: 'Gemini' })[str(p, 'provider')] ?? 'Claude',
   simulate: (c) => ({
-    outputs: { reply: `(모의 AI 답변) ${clip(c.text('prompt'), 40)}` },
-    log: 'AI 호출은 실제로 하지 않고 모의 답변을 썼습니다.',
+    outputs: { reply: t('(모의 AI 답변) {0}', [clip(c.text('prompt'), 40)]) },
+    log: t('AI 호출은 실제로 하지 않고 모의 답변을 썼습니다.'),
   }),
   spec: (p, f) => {
     const ai = provider(p);
@@ -110,10 +111,10 @@ export const webhook: NodeDef = {
     { key: 'content', label: '내용', kind: 'textarea', required: true, maxLength: 2000, refs: true },
     { key: 'username', label: '보내는 이름', kind: 'text', maxLength: 80 },
   ],
-  summary: (p) => str(p, 'urlEnv') || '환경변수 없음',
+  summary: (p) => str(p, 'urlEnv') || t('환경변수 없음'),
   simulate: (c) => {
-    const text = `웹훅(${str(c.props, 'urlEnv')})으로 보냄: "${clip(c.text('content'), 60)}"`;
-    return { effect: { kind: 'action', text }, log: `${text} (실제로 보내지 않음)` };
+    const text = t('웹훅({0})으로 보냄: "{1}"', [str(c.props, 'urlEnv'), clip(c.text('content'), 60)]);
+    return { effect: { kind: 'action', text }, log: t('{0} (실제로 보내지 않음)', [text]) };
   },
   spec: (p, f) =>
     `POST a message to the webhook URL stored in environment variable ${f.text(p.urlEnv)} with content ${f.text(p.content)}${str(p, 'username').trim() ? ` and username ${f.text(p.username)}` : ''}, with all mentions disabled. Log failures and continue.`,
@@ -136,18 +137,18 @@ export const rss: NodeDef = {
     },
   ],
   ports: () => [
-    { id: 'new', label: '새 글 있음' },
-    { id: 'none', label: '없음' },
+    { id: 'new', label: t('새 글 있음') },
+    { id: 'none', label: t('새 글 없음') },
   ],
   outputs: () => [
-    { key: 'title', label: '글 제목', type: 'text' },
-    { key: 'link', label: '글 링크', type: 'text' },
+    { key: 'title', label: t('글 제목'), type: 'text' },
+    { key: 'link', label: t('글 링크'), type: 'text' },
   ],
-  summary: (p) => clip(str(p, 'url').replace(/^https?:\/\//, '') || 'URL 없음'),
+  summary: (p) => clip(str(p, 'url').replace(/^https?:\/\//, '') || t('URL 없음')),
   simulate: () => ({
     port: 'new',
-    outputs: { title: '(모의 새 글 제목)', link: 'https://example.com/post' },
-    log: '새 글이 있다고 가정했습니다. (피드를 실제로 읽지 않음)',
+    outputs: { title: t('(모의 새 글 제목)'), link: 'https://example.com/post' },
+    log: t('새 글이 있다고 가정했습니다. (피드를 실제로 읽지 않음)'),
   }),
   spec: (p, f) =>
     `Fetch the RSS or Atom feed at ${f.text(p.url)} (timeout 10 seconds). Persist the id (guid, else link) of the newest item this step has seen. If the feed has a newer item than the stored one, take exit "new" with outputs title and link of the newest item and store its id; otherwise take exit "none". On the very first run, store the newest item and take "none" so old posts are not announced. On fetch errors, log and take "none".`,

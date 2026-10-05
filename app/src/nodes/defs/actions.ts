@@ -1,7 +1,8 @@
 import { AppWindow, Gavel, Hash, Send, Smile, Tags, Trash2 } from 'lucide-react';
 import type { CheckResult, NodeDef, Permission, Props, SpecFormat } from '../types';
 import { simChannel, simMessage, toText } from '../sim';
-import { CUSTOM_ID, OUT_CHANNEL, OUT_MESSAGE, SNOWFLAKE_OR_REF, bool, clip, is, num, oneOf, rows, str } from '../helpers';
+import { CUSTOM_ID, OUT_CHANNEL, OUT_MESSAGE, SNOWFLAKE_OR_REF, bool, clip, duration, is, num, oneOf, rows, str } from '../helpers';
+import { t } from '../../i18n/t';
 
 const BUTTON_STYLES = ['primary', 'secondary', 'success', 'danger'] as const;
 
@@ -54,30 +55,30 @@ export const sendMessage: NodeDef = {
       ],
     },
   ],
-  outputs: () => [{ ...OUT_MESSAGE, label: '보낸 메시지' }],
-  summary: (p) => clip(str(p, 'content') || (bool(p, 'embed') ? str(p, 'embedTitle') : '') || '내용 없음'),
+  outputs: () => [{ ...OUT_MESSAGE, label: t('보낸 메시지') }],
+  summary: (p) => clip(str(p, 'content') || (bool(p, 'embed') ? str(p, 'embedTitle') : '') || t('내용 없음')),
   check: (p, _self, graph) => {
     const out: CheckResult[] = [];
     if (!str(p, 'content').trim() && !bool(p, 'embed')) {
-      out.push({ level: 'error', field: 'content', message: '내용을 쓰거나 임베드를 켜 주세요.' });
+      out.push({ level: 'error', field: 'content', message: t('내용을 쓰거나 임베드를 켜 주세요.') });
     }
     if (bool(p, 'embed') && !str(p, 'embedTitle').trim() && !str(p, 'embedDescription').trim()) {
-      out.push({ level: 'error', field: 'embedTitle', message: '임베드에는 제목이나 설명이 있어야 합니다.' });
+      out.push({ level: 'error', field: 'embedTitle', message: t('임베드에는 제목이나 설명이 있어야 합니다.') });
     }
     const seen = new Set<string>();
     for (const b of rows(p, 'buttons')) {
       const id = typeof b.customId === 'string' ? b.customId : '';
       if (!id) continue;
       if (b.style === 'link') {
-        if (!/^https?:\/\//.test(id)) out.push({ level: 'error', field: 'buttons', message: `링크 버튼 "${b.label}"에는 http(s) URL이 필요합니다.` });
+        if (!/^https?:\/\//.test(id)) out.push({ level: 'error', field: 'buttons', message: t('링크 버튼 "{0}"에는 http(s) URL이 필요합니다.', [b.label]) });
         continue;
       }
       if (!CUSTOM_ID.regex.test(id)) {
-        out.push({ level: 'error', field: 'buttons', message: `버튼 "${b.label}"의 ID: ${CUSTOM_ID.message}` });
+        out.push({ level: 'error', field: 'buttons', message: t('버튼 "{0}"의 ID: {1}', [b.label, t(CUSTOM_ID.message)]) });
       } else if (seen.has(id)) {
-        out.push({ level: 'error', field: 'buttons', message: `버튼 ID "${id}"가 중복됩니다.` });
+        out.push({ level: 'error', field: 'buttons', message: t('버튼 ID "{0}"가 중복됩니다.', [id]) });
       } else if (!graph.nodesOfType('trigger.button').some((n) => str(n.props, 'customId') === id)) {
-        out.push({ level: 'warning', field: 'buttons', message: `버튼 "${id}"를 눌렀을 때 시작할 "버튼 클릭" 트리거가 없습니다.` });
+        out.push({ level: 'warning', field: 'buttons', message: t('버튼 "{0}"를 눌렀을 때 시작할 "버튼 클릭" 트리거가 없습니다.', [id]) });
       }
       seen.add(id);
     }
@@ -85,19 +86,19 @@ export const sendMessage: NodeDef = {
   },
   simulate: (c) => {
     const target = str(c.props, 'target') || 'reply';
-    const to = target === 'channel' ? toText(c.value('channel')) : target === 'dm' ? `${toText(c.value('user'))} DM` : '답장';
+    const to = target === 'channel' ? toText(c.value('channel')) : target === 'dm' ? `${toText(c.value('user'))} DM` : t('답장');
     const embed = bool(c.props, 'embed')
       ? { title: c.text('embedTitle'), description: c.text('embedDescription'), color: str(c.props, 'embedColor') || '#5865F2', image: c.text('embedImage'), footer: c.text('embedFooter') }
       : null;
     const content = c.text('content');
     return {
-      outputs: { message: simMessage(content || embed?.title || '임베드') },
+      outputs: { message: simMessage(content || embed?.title || t('임베드')) },
       effect: {
         kind: 'message', to, content, embed,
         ephemeral: target === 'reply' && bool(c.props, 'ephemeral'),
         buttons: rows(c.props, 'buttons').map((b) => String(b.label ?? '')).filter(Boolean),
       },
-      log: target === 'reply' ? '답장을 보냈습니다.' : `${to}(으)로 메시지를 보냈습니다.`,
+      log: target === 'reply' ? t('답장을 보냈습니다.') : t('{0}(으)로 메시지를 보냈습니다.', [to]),
     };
   },
   spec: (p, f) => {
@@ -160,15 +161,15 @@ export const showModal: NodeDef = {
     },
   ],
   ports: () => [],
-  summary: (p) => `${str(p, 'title') || '제목 없음'} · ${rows(p, 'fields').length}칸`,
+  summary: (p) => t('{0} · {1}칸', [str(p, 'title') || t('제목 없음'), rows(p, 'fields').length]),
   check: (p, _self, graph) => {
     const id = str(p, 'customId');
     if (!id || graph.nodesOfType('trigger.modalSubmit').some((n) => str(n.props, 'customId') === id)) return [];
-    return [{ level: 'warning', field: 'customId', message: `모달 "${id}"를 제출했을 때 시작할 "모달 제출" 트리거가 없습니다.` }];
+    return [{ level: 'warning', field: 'customId', message: t('모달 "{0}"를 제출했을 때 시작할 "모달 제출" 트리거가 없습니다.', [id]) }];
   },
   simulate: (c) => ({
     effect: { kind: 'modal', title: c.text('title'), fields: rows(c.props, 'fields').map((f) => String(f.label || f.id || '')) },
-    log: '모달을 띄웠습니다. 제출하면 "모달 제출" 흐름이 따로 시작됩니다.',
+    log: t('모달을 띄웠습니다. 제출하면 "모달 제출" 흐름이 따로 시작됩니다.'),
   }),
   spec: (p, f) => {
     const inputs = rows(p, 'fields')
@@ -196,9 +197,9 @@ export const role: NodeDef = {
     { key: 'roleId', label: '역할 ID', kind: 'text', required: true, refs: ['role'], pattern: SNOWFLAKE_OR_REF },
     reasonField,
   ],
-  summary: (p) => (str(p, 'operation') === 'remove' ? '역할 회수' : '역할 지급'),
+  summary: (p) => (str(p, 'operation') === 'remove' ? t('역할 회수') : t('역할 지급')),
   simulate: (c) => {
-    const text = `${toText(c.value('member'))}에게 역할 ${toText(c.value('roleId'))}을(를) ${str(c.props, 'operation') === 'remove' ? '회수' : '지급'}했습니다.`;
+    const text = t('{0}에게 역할 {1}을(를) {2}했습니다.', [toText(c.value('member')), toText(c.value('roleId')), str(c.props, 'operation') === 'remove' ? t('회수') : t('지급')]);
     return { effect: { kind: 'action', text }, log: text };
   },
   spec: (p, f) => {
@@ -235,19 +236,18 @@ export const moderate: NodeDef = {
     },
     reasonField,
   ],
-  summary: (p) => ({ timeout: '타임아웃', kick: '추방', ban: '차단' })[str(p, 'operation')] ?? '타임아웃',
+  summary: (p) => ({ timeout: t('타임아웃'), kick: t('추방'), ban: t('차단') })[str(p, 'operation')] ?? t('타임아웃'),
   check: (p) => {
     if ((str(p, 'operation') || 'timeout') !== 'timeout') return [];
     const minutes = (num(p, 'duration') ?? 0) * ({ minutes: 1, hours: 60, days: 1440 }[str(p, 'unit') || 'minutes'] ?? 1);
-    return minutes > 40320 ? [{ level: 'error', field: 'duration', message: '타임아웃은 최대 28일까지 가능합니다.' }] : [];
+    return minutes > 40320 ? [{ level: 'error', field: 'duration', message: t('타임아웃은 최대 28일까지 가능합니다.') }] : [];
   },
   simulate: (c) => {
     const who = toText(c.value('member'));
-    const unit = ({ minutes: '분', hours: '시간', days: '일' } as Record<string, string>)[str(c.props, 'unit') || 'minutes'];
     const text = {
-      timeout: `${who}을(를) ${c.number('duration')}${unit} 동안 타임아웃했습니다.`,
-      kick: `${who}을(를) 추방했습니다.`,
-      ban: `${who}을(를) 차단했습니다.`,
+      timeout: t('{0}을(를) {1} 동안 타임아웃했습니다.', [who, duration(c.number('duration'), str(c.props, 'unit') || 'minutes')]),
+      kick: t('{0}을(를) 추방했습니다.', [who]),
+      ban: t('{0}을(를) 차단했습니다.', [who]),
     }[str(c.props, 'operation') || 'timeout'] ?? '';
     return { effect: { kind: 'action', text }, log: text };
   },
@@ -275,7 +275,7 @@ export const deleteMessage: NodeDef = {
     { key: 'message', label: '삭제할 메시지', kind: 'text', required: true, refs: ['message'], pattern: SNOWFLAKE_OR_REF },
   ],
   simulate: (c) => {
-    const text = `메시지를 삭제했습니다 ${toText(c.value('message'))}.`;
+    const text = t('메시지를 삭제했습니다 {0}.', [toText(c.value('message'))]);
     return { effect: { kind: 'action', text }, log: text };
   },
   spec: (p, f) => `Delete message ${f.target(p.message)}. If it is already gone, continue silently. ${FAIL_SOFT}`,
@@ -292,9 +292,9 @@ export const react: NodeDef = {
     { key: 'message', label: '메시지', kind: 'text', required: true, refs: ['message'], pattern: SNOWFLAKE_OR_REF },
     { key: 'emoji', label: '이모지', kind: 'text', required: true, maxLength: 64 },
   ],
-  summary: (p) => str(p, 'emoji') || '이모지 없음',
+  summary: (p) => str(p, 'emoji') || t('이모지 없음'),
   simulate: (c) => {
-    const text = `${c.text('emoji')} 반응을 달았습니다.`;
+    const text = t('{0} 반응을 달았습니다.', [c.text('emoji')]);
     return { effect: { kind: 'action', text }, log: text };
   },
   spec: (p, f) => `Add the reaction ${f.text(p.emoji)} to message ${f.target(p.message)}. ${FAIL_SOFT}`,
@@ -320,11 +320,11 @@ export const createChannel: NodeDef = {
     { key: 'categoryId', label: '카테고리 ID', kind: 'text', pattern: SNOWFLAKE_OR_REF, when: is('kind', 'text') },
     { key: 'private', label: '비공개', kind: 'boolean', default: false },
   ],
-  outputs: () => [{ ...OUT_CHANNEL, label: '만든 채널' }],
-  summary: (p) => clip(str(p, 'name') || '이름 없음'),
+  outputs: () => [{ ...OUT_CHANNEL, label: t('만든 채널') }],
+  summary: (p) => clip(str(p, 'name') || t('이름 없음')),
   simulate: (c) => {
-    const channel = simChannel(c.text('name') || '새 채널');
-    const text = `${str(c.props, 'kind') === 'text' ? '텍스트 채널' : '스레드'} #${channel.name}을(를) 만들었습니다.`;
+    const channel = simChannel(c.text('name') || t('새 채널'));
+    const text = t('{0} #{1}을(를) 만들었습니다.', [str(c.props, 'kind') === 'text' ? t('텍스트 채널') : t('스레드'), channel.name]);
     return { outputs: { channel }, effect: { kind: 'action', text }, log: text };
   },
   spec: (p, f) => {

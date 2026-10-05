@@ -9,6 +9,7 @@ import { DEFAULT_META, type BotEdge, type BotNode, type ProjectMeta } from '../f
 import { defaultProps, getDef } from '../nodes/registry';
 import type { Props } from '../nodes/types';
 import { debouncedLocalStorage } from './storage';
+import { t } from '../i18n/t';
 
 interface Snapshot {
   meta: ProjectMeta;
@@ -222,7 +223,7 @@ export const useProject = create<ProjectState>()(
 
       reset: () => {
         get().checkpoint();
-        set({ meta: DEFAULT_META, nodes: [], edges: [], seq: 1 });
+        set({ meta: { ...DEFAULT_META, name: t(DEFAULT_META.name) }, nodes: [], edges: [], seq: 1 });
       },
     }),
     {

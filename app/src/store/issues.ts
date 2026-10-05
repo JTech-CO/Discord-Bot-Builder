@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import type { BotEdge, BotNode } from '../flow/model';
 import { validate, type Issue } from '../flow/validate';
+import { useLang } from '../i18n/t';
 import { useProject } from './project';
 
 interface IssueState {
@@ -59,4 +60,10 @@ useProject.subscribe((s) => {
   lastEdges = s.edges;
   lastMeta = s.meta;
   useIssues.setState((prev) => compute(s.nodes, s.edges, prev));
+});
+
+// Messages are written in the UI language, so switching it rebuilds them.
+useLang.subscribe(() => {
+  const { nodes, edges } = useProject.getState();
+  useIssues.setState((prev) => compute(nodes, edges, prev));
 });

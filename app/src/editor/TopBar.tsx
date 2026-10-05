@@ -12,8 +12,42 @@ import { useUI, type Theme } from '../store/ui';
 import { Button, IconButton, Menu, cx } from '../ui/controls';
 import { downloadText, safeFileName } from '../ui/files';
 import { openDraft } from './DraftDialog';
+import { t, useLang, type Lang } from '../i18n/t';
+import { tx } from '../i18n/tx';
 
 const THEME_ICON = { system: Monitor, dark: Moon, light: Sun } as const;
+
+// Each language is named in itself, so the way back is readable whichever one is on.
+const LANGUAGES: { id: Lang; short: string; name: string }[] = [
+  { id: 'ko', short: 'KO', name: '한국어' },
+  { id: 'en', short: 'EN', name: 'English' },
+];
+
+function LanguageSwitch() {
+  const lang = useLang((s) => s.lang);
+  const setLang = useLang((s) => s.setLang);
+  return (
+    <div role="radiogroup" aria-label={t('언어')} className="inline-flex h-7 rounded-md border border-line bg-field p-0.5">
+      {LANGUAGES.map((l) => (
+        <button
+          key={l.id}
+          type="button"
+          role="radio"
+          aria-checked={lang === l.id}
+          aria-label={l.name}
+          title={l.name}
+          onClick={() => setLang(l.id)}
+          className={cx(
+            'rounded px-1.5 text-xs font-medium',
+            lang === l.id ? 'bg-raised text-fg shadow-sm' : 'text-fg-subtle hover:text-fg',
+          )}
+        >
+          {l.short}
+        </button>
+      ))}
+    </div>
+  );
+}
 const THEME_LABEL = { system: '시스템 설정', dark: '어둡게', light: '밝게' } as const;
 
 export function TopBar() {
@@ -37,7 +71,7 @@ export function TopBar() {
     }
     useProject.getState().load(result.project);
     requestAnimationFrame(() => rf.fitView({ padding: 0.2, duration: 200, maxZoom: 1 }));
-    notify(`${label}을(를) 불러왔습니다. 실행 취소(Ctrl+Z)로 되돌릴 수 있습니다.`);
+    notify(t('{0}을(를) 불러왔습니다. 실행 취소(Ctrl+Z)로 되돌릴 수 있습니다.', [label]));
   };
 
   const onFile = async (e: ChangeEvent<HTMLInputElement>) => {
@@ -45,7 +79,7 @@ export function TopBar() {
     e.target.value = '';
     if (!file) return;
     if (file.size > MAX_FILE_BYTES) {
-      notify('파일이 너무 큽니다. (최대 2MB)', 'error');
+      notify(t('파일이 너무 큽니다. (최대 2MB)'), 'error');
       return;
     }
     applyLoad(parseProjectText(await file.text()), `"${file.name}"`);
@@ -57,7 +91,7 @@ export function TopBar() {
   };
 
   const newProject = () => {
-    if (useProject.getState().nodes.length && !window.confirm('새 프로젝트를 시작할까요? 저장하지 않은 캔버스는 실행 취소로만 되돌릴 수 있습니다.')) return;
+    if (useProject.getState().nodes.length && !window.confirm(t('새 프로젝트를 시작할까요? 저장하지 않은 캔버스는 실행 취소로만 되돌릴 수 있습니다.'))) return;
     useProject.getState().reset();
   };
 
@@ -65,7 +99,7 @@ export function TopBar() {
 
   return (
     <header className="flex h-12 min-w-0 items-center gap-1 border-b border-line bg-panel px-2 sm:gap-2">
-      <IconButton icon={PanelLeft} label={leftOpen ? '노드 목록 닫기' : '노드 목록 열기'} aria-pressed={leftOpen} onClick={() => togglePanel('left')} />
+      <IconButton icon={PanelLeft} label={leftOpen ? t('노드 목록 닫기') : t('노드 목록 열기')} aria-pressed={leftOpen} onClick={() => togglePanel('left')} />
 
       <div className="flex min-w-0 items-center gap-2">
         <span className="hidden size-7 items-center justify-center rounded-md bg-accent text-white sm:inline-flex" aria-hidden>
@@ -74,7 +108,7 @@ export function TopBar() {
         <span className="hidden text-sm font-semibold text-fg md:inline">Discord Bot Builder</span>
         <span className="hidden text-fg-subtle md:inline" aria-hidden>/</span>
         <label className="min-w-0">
-          <span className="sr-only">봇 이름</span>
+          <span className="sr-only">{t('봇 이름')}</span>
           <input
             value={name}
             maxLength={100}
@@ -86,18 +120,16 @@ export function TopBar() {
 
       <Menu
         trigger={(p) => (
-          <button type="button" {...p} className="inline-flex h-8 items-center gap-1 rounded-md px-2.5 text-sm text-fg-muted hover:bg-hover hover:text-fg">
-            파일 <ChevronDown size={14} aria-hidden />
-          </button>
+          <button type="button" {...p} className="inline-flex h-8 items-center gap-1 rounded-md px-2.5 text-sm text-fg-muted hover:bg-hover hover:text-fg">{tx('파일 {0}', [<ChevronDown size={14} aria-hidden />])}</button>
         )}
         items={[
-          { label: '설명으로 초안 만들기…', icon: Wand, onSelect: openDraft },
+          { label: t('설명으로 초안 만들기…'), icon: Wand, onSelect: openDraft },
           'divider',
-          { label: '새 프로젝트', icon: FilePlus2, onSelect: newProject },
-          { label: '파일 열기…', icon: FolderOpen, onSelect: () => fileInput.current?.click() },
-          { label: '파일로 저장', icon: Download, onSelect: save },
+          { label: t('새 프로젝트'), icon: FilePlus2, onSelect: newProject },
+          { label: t('파일 열기…'), icon: FolderOpen, onSelect: () => fileInput.current?.click() },
+          { label: t('파일로 저장'), icon: Download, onSelect: save },
           'divider',
-          { label: '예제: 주사위 봇', onSelect: () => applyLoad(fromFile(diceExample), '예제') },
+          { label: t('예제: 주사위 봇'), onSelect: () => applyLoad(fromFile(diceExample), t('예제')) },
         ]}
       />
       <input ref={fileInput} type="file" accept=".json,application/json" className="hidden" onChange={onFile} tabIndex={-1} aria-hidden />
@@ -107,12 +139,12 @@ export function TopBar() {
           type="button"
           onClick={() => toggleBottom('problems')}
           aria-pressed={problemsShown}
-          aria-label={`문제: 오류 ${errors}개, 경고 ${warnings}개`}
+          aria-label={t('문제: 오류 {0}개, 경고 {1}개', [errors, warnings])}
           className={cx('inline-flex h-8 items-center gap-2.5 rounded-md px-2.5 text-sm hover:bg-hover', problemsShown && 'bg-hover')}
         >
           {errors + warnings === 0 ? (
             <span className="inline-flex items-center gap-1 text-fg-muted">
-              <CircleCheck size={15} className="text-success" aria-hidden /> <span className="hidden sm:inline">문제 없음</span>
+              <CircleCheck size={15} className="text-success" aria-hidden /> <span className="hidden sm:inline">{t('문제 없음')}</span>
             </span>
           ) : (
             <>
@@ -127,30 +159,31 @@ export function TopBar() {
         </button>
 
         <div className="mx-1 hidden h-5 w-px bg-line sm:block" aria-hidden />
-        <IconButton icon={Undo2} label="실행 취소 (Ctrl+Z)" disabled={!canUndo} onClick={() => useProject.getState().undo()} className="max-sm:hidden" />
-        <IconButton icon={Redo2} label="다시 실행 (Ctrl+Y)" disabled={!canRedo} onClick={() => useProject.getState().redo()} className="max-sm:hidden" />
+        <LanguageSwitch />
+        <IconButton icon={Undo2} label={t('실행 취소 (Ctrl+Z)')} disabled={!canUndo} onClick={() => useProject.getState().undo()} className="max-sm:hidden" />
+        <IconButton icon={Redo2} label={t('다시 실행 (Ctrl+Y)')} disabled={!canRedo} onClick={() => useProject.getState().redo()} className="max-sm:hidden" />
         <Menu
           align="right"
           trigger={(p) => (
-            <button type="button" {...p} aria-label={`테마: ${THEME_LABEL[theme]}`} title="테마" className="inline-flex size-8 items-center justify-center rounded-md text-fg-muted hover:bg-hover hover:text-fg">
+            <button type="button" {...p} aria-label={t('테마: {0}', [t(THEME_LABEL[theme])])} title={t('테마')} className="inline-flex size-8 items-center justify-center rounded-md text-fg-muted hover:bg-hover hover:text-fg">
               <ThemeIcon size={16} strokeWidth={1.75} aria-hidden />
             </button>
           )}
-          items={(Object.keys(THEME_LABEL) as Theme[]).map((t) => ({
-            label: THEME_LABEL[t] + (t === theme ? ' (사용 중)' : ''),
-            icon: THEME_ICON[t],
-            onSelect: () => setTheme(t),
+          items={(Object.keys(THEME_LABEL) as Theme[]).map((th) => ({
+            label: t(THEME_LABEL[th]) + (th === theme ? t(' (사용 중)') : ''),
+            icon: THEME_ICON[th],
+            onSelect: () => setTheme(th),
           }))}
         />
-        <IconButton icon={PanelRight} label={rightOpen ? '속성 패널 닫기' : '속성 패널 열기'} aria-pressed={rightOpen} onClick={() => togglePanel('right')} />
+        <IconButton icon={PanelRight} label={rightOpen ? t('속성 패널 닫기') : t('속성 패널 열기')} aria-pressed={rightOpen} onClick={() => togglePanel('right')} />
         <Button icon={Play} aria-pressed={simulateShown} onClick={() => toggleBottom('simulate')} className="ml-1">
-          <span className="max-sm:sr-only">테스트</span>
+          <span className="max-sm:sr-only">{t('테스트')}</span>
         </Button>
         <Button icon={ScrollText} aria-pressed={promptShown} onClick={() => toggleBottom('prompt')}>
-          <span className="max-sm:sr-only">프롬프트</span>
+          <span className="max-sm:sr-only">{t('프롬프트')}</span>
         </Button>
         <Button variant="primary" icon={Hammer} aria-pressed={generateShown} onClick={() => toggleBottom('generate')}>
-          <span className="max-sm:sr-only">생성</span>
+          <span className="max-sm:sr-only">{t('생성')}</span>
         </Button>
       </div>
     </header>

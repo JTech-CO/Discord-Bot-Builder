@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { getDef } from '../nodes/registry';
 import type { NodeDef, Props, TableRow } from '../nodes/types';
 import { NODE_ID_RE, nodeNumber, type BotEdge, type BotNode, type ProjectMeta } from './model';
+import { t } from '../i18n/t';
 
 export const MAX_FILE_BYTES = 2 * 1024 * 1024;
 const MAX_NODES = 500;
@@ -100,7 +101,7 @@ export function fromFile(data: unknown): LoadResult {
   const parsed = fileSchema.safeParse(data);
   if (!parsed.success) {
     const first = parsed.error.issues[0];
-    return { ok: false, error: `프로젝트 파일 형식이 올바르지 않습니다. (${first?.path.join('.') || '최상위'}: ${first?.message})` };
+    return { ok: false, error: t('프로젝트 파일 형식이 올바르지 않습니다. ({0}: {1})', [first?.path.join('.') || t('최상위'), first?.message]) };
   }
   const file = parsed.data;
 
@@ -108,8 +109,8 @@ export function fromFile(data: unknown): LoadResult {
   const nodes: BotNode[] = [];
   for (const n of file.nodes) {
     const def = getDef(n.type);
-    if (!def) return { ok: false, error: `지원하지 않는 노드 종류가 있습니다: ${n.type}` };
-    if (ids.has(n.id)) return { ok: false, error: `노드 ID가 중복됩니다: ${n.id}` };
+    if (!def) return { ok: false, error: t('지원하지 않는 노드 종류가 있습니다: {0}', [n.type]) };
+    if (ids.has(n.id)) return { ok: false, error: t('노드 ID가 중복됩니다: {0}', [n.id]) };
     ids.add(n.id);
     nodes.push({ id: n.id, type: 'bot', position: n.position, data: { type: n.type, props: sanitizeProps(def, n.props) } });
   }
@@ -133,7 +134,7 @@ export function parseProjectText(text: string): LoadResult {
   try {
     data = JSON.parse(text);
   } catch {
-    return { ok: false, error: 'JSON 파일을 읽을 수 없습니다.' };
+    return { ok: false, error: t('JSON 파일을 읽을 수 없습니다.') };
   }
   return fromFile(data);
 }

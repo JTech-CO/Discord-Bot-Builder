@@ -3,6 +3,7 @@ import { existsSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { createInterface } from 'node:readline';
 import type { BotLogLine, BotState, NodeInfo } from '../src/platform/api';
+import { t } from '../src/i18n/t';
 
 const WIN = process.platform === 'win32';
 const NPM = WIN ? 'npm.cmd' : 'npm';
@@ -34,7 +35,7 @@ export class BotRunner {
   private log(stream: BotLogLine['stream'], text: string) {
     // Never echo secret values back to the screen, even if the bot prints them.
     let clean = text.replace(ANSI, '');
-    for (const secret of this.hide) clean = clean.split(secret).join('[숨김]');
+    for (const secret of this.hide) clean = clean.split(secret).join(t('[숨김]'));
     this.onLog({ stream, text: clean.length > MAX_LINE ? `${clean.slice(0, MAX_LINE)}…` : clean });
   }
 
@@ -43,8 +44,8 @@ export class BotRunner {
       execFile('node', ['--version'], { windowsHide: true, timeout: 5000 }, (err, stdout) => {
         const version = stdout?.trim() || null;
         const major = Number(/^v(\d+)/.exec(version ?? '')?.[1] ?? 0);
-        if (err || !version) done({ ok: false, version: null, message: 'Node.js를 찾지 못했습니다. nodejs.org에서 LTS 버전을 설치한 뒤 앱을 다시 시작해 주세요.' });
-        else if (major < MIN_NODE) done({ ok: false, version, message: `Node.js ${version}는 너무 오래되었습니다. ${MIN_NODE} 이상이 필요합니다.` });
+        if (err || !version) done({ ok: false, version: null, message: t('Node.js를 찾지 못했습니다. nodejs.org에서 LTS 버전을 설치한 뒤 앱을 다시 시작해 주세요.') });
+        else if (major < MIN_NODE) done({ ok: false, version, message: t('Node.js {0}는 너무 오래되었습니다. {1} 이상이 필요합니다.', [version, MIN_NODE]) });
         else done({ ok: true, version, message: `Node.js ${version}` });
       });
     });
@@ -58,7 +59,7 @@ export class BotRunner {
     this.child = child;
     createInterface({ input: child.stdout! }).on('line', (l) => this.log('out', l));
     createInterface({ input: child.stderr! }).on('line', (l) => this.log('err', l));
-    child.on('error', (e) => this.log('sys', `실행하지 못했습니다: ${e.message}`));
+    child.on('error', (e) => this.log('sys', t('실행하지 못했습니다: {0}', [e.message])));
     return child;
   }
 
@@ -115,7 +116,7 @@ export class BotRunner {
     const child = this.child;
     if (!child || child.exitCode !== null || child.pid === undefined) return;
     this.stopping = true;
-    this.log('sys', '봇을 멈춥니다.');
+    this.log('sys', t('봇을 멈춥니다.'));
     // Kill the whole tree: npm → node → the bot.
     if (WIN) await new Promise((done) => execFile('taskkill', ['/pid', String(child.pid), '/T', '/F'], { windowsHide: true }, () => done(null)));
     else {

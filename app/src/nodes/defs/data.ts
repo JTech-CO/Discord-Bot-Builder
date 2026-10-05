@@ -2,6 +2,7 @@ import { Calculator, Database, TextQuote } from 'lucide-react';
 import type { NodeDef } from '../types';
 import { toNumber, toText } from '../sim';
 import { SNOWFLAKE_OR_REF, STORE_KEY, clip, is, str } from '../helpers';
+import { t } from '../../i18n/t';
 
 const OPERATION_LABEL: Record<string, string> = { get: '읽기', set: '저장', add: '더하기', subtract: '빼기' };
 
@@ -32,8 +33,8 @@ export const variable: NodeDef = {
     { key: 'value', label: '값', kind: 'text', required: true, maxLength: 500, refs: true, when: is('operation', 'set', 'add', 'subtract') },
     { key: 'initial', label: '값이 없을 때 기본값', kind: 'text', maxLength: 500, default: '0' },
   ],
-  outputs: () => [{ key: 'value', label: '결과 값', type: 'any' }],
-  summary: (p) => `${str(p, 'key') || '이름 없음'} ${OPERATION_LABEL[str(p, 'operation')] ?? '읽기'}`,
+  outputs: () => [{ key: 'value', label: t('결과 값'), type: 'any' }],
+  summary: (p) => `${str(p, 'key') || t('이름 없음')} ${t(OPERATION_LABEL[str(p, 'operation')] ?? '읽기')}`,
   simulate: (c) => {
     const scope = str(c.props, 'scope') || 'user';
     const name = str(c.props, 'key');
@@ -46,10 +47,10 @@ export const variable: NodeDef = {
       : op === 'subtract' ? toNumber(before) - toNumber(c.text('value'))
       : before;
     if (op !== 'get') c.store.set(key, after);
-    const where = scope === 'user' ? `${owner}의 ` : scope === 'server' ? '서버의 ' : '';
+    const where = scope === 'user' ? t('{0}의 ', [owner]) : scope === 'server' ? t('서버의 ') : '';
     return {
       outputs: { value: after },
-      log: op === 'get' ? `${where}"${name}" 값은 ${toText(before)}입니다.` : `${where}"${name}" 값을 ${toText(before)}에서 ${toText(after)}(으)로 바꿨습니다.`,
+      log: op === 'get' ? t('{0}"{1}" 값은 {2}입니다.', [where, name, toText(before)]) : t('{0}"{1}" 값을 {2}에서 {3}(으)로 바꿨습니다.', [where, name, toText(before), toText(after)]),
     };
   },
   spec: (p, f) => {
@@ -100,7 +101,7 @@ export const math: NodeDef = {
       ],
     },
   ],
-  outputs: () => [{ key: 'result', label: '계산 결과', type: 'number' }],
+  outputs: () => [{ key: 'result', label: t('계산 결과'), type: 'number' }],
   summary: (p) => clip(`${str(p, 'left') || '?'} ${str(p, 'operator') || '+'} ${str(p, 'right') || '?'}`, 40),
   simulate: (c) => {
     const a = toNumber(c.text('left'));
@@ -143,19 +144,19 @@ export const text: NodeDef = {
       ],
     },
   ],
-  outputs: () => [{ key: 'result', label: '만든 문장', type: 'text' }],
-  summary: (p) => clip(str(p, 'template') || '비어 있음'),
+  outputs: () => [{ key: 'result', label: t('만든 문장'), type: 'text' }],
+  summary: (p) => clip(str(p, 'template') || t('비어 있음')),
   simulate: (c) => {
     let result = c.text('template');
-    const t = str(c.props, 'transform');
-    if (t === 'upper') result = result.toUpperCase();
-    else if (t === 'lower') result = result.toLowerCase();
-    else if (t === 'trim') result = result.trim();
-    return { outputs: { result }, log: `문장을 만들었습니다: "${result.length > 40 ? `${result.slice(0, 39)}…` : result}"` };
+    const transform = str(c.props, 'transform');
+    if (transform === 'upper') result = result.toUpperCase();
+    else if (transform === 'lower') result = result.toLowerCase();
+    else if (transform === 'trim') result = result.trim();
+    return { outputs: { result }, log: t('문장을 만들었습니다: "{0}"', [result.length > 40 ? `${result.slice(0, 39)}…` : result]) };
   },
   spec: (p, f) => {
-    const t = { upper: ', converted to uppercase', lower: ', converted to lowercase', trim: ', with surrounding whitespace removed' }[str(p, 'transform')] ?? '';
-    return `Build the text ${f.text(p.template)}${t} as output result.`;
+    const how = { upper: ', converted to uppercase', lower: ', converted to lowercase', trim: ', with surrounding whitespace removed' }[str(p, 'transform')] ?? '';
+    return `Build the text ${f.text(p.template)}${how} as output result.`;
   },
 };
 

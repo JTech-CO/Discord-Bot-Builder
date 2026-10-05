@@ -13,6 +13,8 @@ import { useSimulator } from '../store/simulator';
 import { useUI } from '../store/ui';
 import { Button, cx } from '../ui/controls';
 import { prettyRefs } from './BotNodeCard';
+import { t } from '../i18n/t';
+import { tx } from '../i18n/tx';
 
 const HEX = /^#[0-9a-fA-F]{6}$/;
 
@@ -63,7 +65,7 @@ function Controls() {
   const triggers = useTriggers();
   const { triggerId, typed, setTrigger, setInput, runNow, resetData, dataSize } = useSimulator();
   const rev = useIssues((s) => s.rev);
-  const current = triggerId && triggers.some((t) => t.id === triggerId) ? triggerId : triggers[0]?.id ?? null;
+  const current = triggerId && triggers.some((tr) => tr.id === triggerId) ? triggerId : triggers[0]?.id ?? null;
 
   // Input fields come from the trigger definition (modal fields, slash options, …).
   const inputs = useMemo(() => {
@@ -74,7 +76,7 @@ function Controls() {
   }, [current, rev]);
 
   if (!current) {
-    return <p className="p-4 text-sm text-fg-muted">트리거가 없습니다. 캔버스에 트리거를 먼저 놓으세요.</p>;
+    return <p className="p-4 text-sm text-fg-muted">{t('트리거가 없습니다. 캔버스에 트리거를 먼저 놓으세요.')}</p>;
   }
 
   return (
@@ -87,27 +89,25 @@ function Controls() {
       }}
     >
       <div>
-        <label htmlFor="sim-trigger" className="mb-1 block text-sm text-fg">시작할 트리거</label>
+        <label htmlFor="sim-trigger" className="mb-1 block text-sm text-fg">{t('시작할 트리거')}</label>
         <select
           id="sim-trigger"
           value={current}
           onChange={(e) => setTrigger(e.target.value)}
           className="h-8 w-full rounded-md border border-line bg-field px-2 text-sm text-fg focus:border-accent focus:outline-none"
         >
-          {triggers.map((t) => <option key={t.id} value={t.id}>{t.label}</option>)}
+          {triggers.map((tr) => <option key={tr.id} value={tr.id}>{tr.label}</option>)}
         </select>
       </div>
       {inputs.map((d) => (
         <InputField key={d.key} def={d} value={typed[current]?.[d.key] ?? d.default} onChange={(v) => { setTrigger(current); setInput(d.key, v); }} />
       ))}
-      <Button type="submit" variant="primary" icon={Play} className="w-full">실행</Button>
+      <Button type="submit" variant="primary" icon={Play} className="w-full">{t('실행')}</Button>
       <div className="flex items-center justify-between gap-2 text-xs text-fg-subtle">
-        <span>기억 중인 값 {dataSize}개 (저장 데이터·쿨다운)</span>
-        <Button size="sm" variant="ghost" icon={RotateCcw} onClick={resetData} disabled={dataSize === 0}>초기화</Button>
+        <span>{t('기억 중인 값 {0}개 (저장 데이터·쿨다운)', [dataSize])}</span>
+        <Button size="sm" variant="ghost" icon={RotateCcw} onClick={resetData} disabled={dataSize === 0}>{t('초기화')}</Button>
       </div>
-      <p className="text-xs text-fg-subtle">
-        디스코드와 AI 없이 이 앱 안에서만 실행합니다. HTTP·AI·RSS·자연어 지시 노드는 모의 값을 쓰고, 대기는 건너뜁니다.
-      </p>
+      <p className="text-xs text-fg-subtle">{t('디스코드와 AI 없이 이 앱 안에서만 실행합니다. HTTP·AI·RSS·자연어 지시 노드는 모의 값을 쓰고, 대기는 건너뜁니다.')}</p>
     </form>
   );
 }
@@ -122,16 +122,16 @@ function MessagePreview({ effect, botName }: { effect: Extract<SimEffect, { kind
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-baseline gap-x-2">
           <span className="font-semibold text-fg">{botName}</span>
-          <span className="rounded bg-accent px-1 text-[11px] font-semibold text-white">앱</span>
-          {effect.to !== '답장' && <span className="text-xs text-fg-subtle">→ {effect.to}</span>}
+          <span className="rounded bg-accent px-1 text-[11px] font-semibold text-white">{t('앱')}</span>
+          {effect.to !== t('답장') && <span className="text-xs text-fg-subtle">→ {effect.to}</span>}
         </div>
-        {effect.ephemeral && <p className="text-xs text-fg-subtle">명령어를 쓴 사람에게만 보이는 메시지</p>}
+        {effect.ephemeral && <p className="text-xs text-fg-subtle">{t('명령어를 쓴 사람에게만 보이는 메시지')}</p>}
         {effect.content && <p className="mt-0.5 break-words whitespace-pre-wrap text-fg">{effect.content}</p>}
         {effect.embed && (
           <div className="mt-1.5 max-w-md rounded border-l-4 bg-raised p-3" style={{ borderLeftColor: color }}>
             {effect.embed.title && <p className="font-semibold break-words text-fg">{effect.embed.title}</p>}
             {effect.embed.description && <p className="mt-1 text-sm break-words whitespace-pre-wrap text-fg">{effect.embed.description}</p>}
-            {effect.embed.image && <p className="mt-2 text-xs break-all text-fg-subtle">이미지: {effect.embed.image}</p>}
+            {effect.embed.image && <p className="mt-2 text-xs break-all text-fg-subtle">{t('이미지: {0}', [effect.embed.image])}</p>}
             {effect.embed.footer && <p className="mt-2 text-xs text-fg-muted">{effect.embed.footer}</p>}
           </div>
         )}
@@ -150,7 +150,7 @@ function EffectItem({ effect, botName }: { effect: SimEffect; botName: string })
   if (effect.kind === 'modal') {
     return (
       <div className="max-w-sm rounded-lg border border-line bg-raised p-3">
-        <p className="flex items-center gap-2 font-semibold text-fg"><AppWindow size={15} aria-hidden /> {effect.title || '모달'}</p>
+        <p className="flex items-center gap-2 font-semibold text-fg"><AppWindow size={15} aria-hidden /> {effect.title || t('모달')}</p>
         <ul className="mt-2 space-y-1.5">
           {effect.fields.map((f, i) => <li key={i} className="rounded border border-line bg-field px-2 py-1 text-sm text-fg-muted">{f}</li>)}
         </ul>
@@ -173,7 +173,7 @@ const STATUS_TEXT: Record<SimRun['status'], string> = {
 };
 
 function Result({ run }: { run: SimRun }) {
-  const botName = useProject((s) => s.meta.name) || '봇';
+  const botName = useProject((s) => s.meta.name) || t('봇');
   const types = useProject(useShallow((s) => Object.fromEntries(s.nodes.map((n) => [n.id, n.data.type]))));
   const stale = useIssues((s) => s.rev) !== useSimulator((s) => s.runRev);
   const active = useSimulator((s) => s.active);
@@ -181,25 +181,21 @@ function Result({ run }: { run: SimRun }) {
   const effects = run.steps.filter((s) => s.effect);
 
   return (
-    <div className="h-full overflow-y-auto">
+    <div className="scroll-hidden h-full overflow-y-auto">
       {stale && (
-        <p role="status" className="flex items-center gap-2 border-b border-line bg-warning-soft px-4 py-2 text-[13px] text-warning">
-          <TriangleAlert size={15} aria-hidden /> 흐름이 바뀌었습니다. 다시 실행하면 최신 흐름으로 확인합니다.
-        </p>
+        <p role="status" className="flex items-center gap-2 border-b border-line bg-warning-soft px-4 py-2 text-[13px] text-warning">{tx('{0} 흐름이 바뀌었습니다. 다시 실행하면 최신 흐름으로 확인합니다.', [<TriangleAlert size={15} aria-hidden />])}</p>
       )}
       <div className="grid gap-6 p-4 xl:grid-cols-2">
         <section aria-labelledby="sim-preview">
-          <h3 id="sim-preview" className="text-xs font-semibold text-fg-subtle">디스코드에서 보이는 것</h3>
+          <h3 id="sim-preview" className="text-xs font-semibold text-fg-subtle">{t('디스코드에서 보이는 것')}</h3>
           <div className="mt-2 space-y-4 rounded-lg border border-line bg-canvas p-4">
             {effects.length ? effects.map((s, i) => <EffectItem key={i} effect={s.effect!} botName={botName} />) : (
-              <p className="text-sm text-fg-muted">보이는 결과가 없습니다.</p>
+              <p className="text-sm text-fg-muted">{t('보이는 결과가 없습니다.')}</p>
             )}
           </div>
         </section>
         <section aria-labelledby="sim-steps">
-          <h3 id="sim-steps" className="text-xs font-semibold text-fg-subtle">
-            단계 {run.steps.length}개 · {STATUS_TEXT[run.status]}
-          </h3>
+          <h3 id="sim-steps" className="text-xs font-semibold text-fg-subtle">{t('단계 {0}개 · {1}', [run.steps.length, t(STATUS_TEXT[run.status])])}</h3>
           <ol className="mt-2 space-y-1">
             {run.steps.map((s, i) => {
               const def = getDef(types[s.nodeId] ?? s.type);
@@ -251,15 +247,13 @@ export function SimulatorView() {
   const hasTriggers = useProject((s) => s.nodes.some((n) => isTrigger(getDef(n.data.type))));
   return (
     <div className="grid h-full min-h-0 grid-rows-[auto_minmax(0,1fr)] md:grid-cols-[300px_minmax(0,1fr)] md:grid-rows-1">
-      <div className="max-h-56 overflow-y-auto border-b border-line md:max-h-none md:border-r md:border-b-0">
+      <div className="scroll-hidden max-h-56 overflow-y-auto border-b border-line md:max-h-none md:border-r md:border-b-0">
         <Controls />
       </div>
       {run && hasTriggers ? (
         <Result run={run} />
       ) : (
-        <p className="p-4 text-sm text-fg-muted">
-          왼쪽에서 가짜 이벤트를 정하고 실행하세요. 어떤 노드를 거쳤는지 캔버스에 표시되고, 디스코드에서 보일 메시지를 미리 볼 수 있습니다.
-        </p>
+        <p className="p-4 text-sm text-fg-muted">{t('왼쪽에서 가짜 이벤트를 정하고 실행하세요. 어떤 노드를 거쳤는지 캔버스에 표시되고, 디스코드에서 보일 메시지를 미리 볼 수 있습니다.')}</p>
       )}
     </div>
   );

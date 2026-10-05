@@ -4,6 +4,7 @@ import { fromFile } from '../flow/file';
 import { DEFAULT_META } from '../flow/model';
 import { NODE_DEFS, defaultProps, portsOf } from '../nodes/registry';
 import { DISCORD_TOKEN_LIKE, E, N } from '../test/graph';
+import { useLang } from '../i18n/t';
 import { compilePrompt, flowKey } from './compile';
 
 const headings = (text: string) => text.split('\n').filter((l) => /^#{1,3} /.test(l));
@@ -96,5 +97,18 @@ describe('flowKey', () => {
     const edited = nodes.map((n) => (n.data.props.content ? { ...n, data: { ...n.data, props: { ...n.data.props, content: '다른 문구' } } } : n));
     expect(key(meta, edited)).not.toBe(key());
     expect(key({ ...meta, name: '끝말잇기 봇' })).not.toBe(key());
+  });
+
+  it('does not change with the UI language', () => {
+    const loaded = fromFile(diceExample);
+    if (!loaded.ok) throw new Error(loaded.error);
+    const { meta, nodes, edges } = loaded.project;
+    const korean = compilePrompt(meta, nodes, edges, 'api').text;
+    useLang.getState().setLang('en');
+    try {
+      expect(compilePrompt(meta, nodes, edges, 'api').text).toBe(korean);
+    } finally {
+      useLang.getState().setLang('ko');
+    }
   });
 });

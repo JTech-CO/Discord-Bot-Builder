@@ -2,6 +2,7 @@ import Anthropic from '@anthropic-ai/sdk';
 import { zodOutputFormat } from '@anthropic-ai/sdk/helpers/zod';
 import { MAX_OUTPUT_TOKENS, type ModelId } from './models';
 import { ProjectOutput } from './output';
+import { t } from '../i18n/t';
 
 export type GenerationErrorKind =
   | 'auth' | 'permission' | 'rate' | 'overloaded' | 'network' | 'bad_request'
@@ -58,15 +59,15 @@ function describeProgress(snapshot: string): GenerationProgress {
 
 export function toGenerationError(err: unknown): GenerationError {
   if (err instanceof GenerationError) return err;
-  if (err instanceof Anthropic.APIUserAbortError) return new GenerationError('aborted', '생성을 취소했습니다.');
-  if (err instanceof Anthropic.AuthenticationError) return new GenerationError('auth', 'API 키가 올바르지 않거나 만료되었습니다. 키를 다시 확인해 주세요.');
-  if (err instanceof Anthropic.PermissionDeniedError) return new GenerationError('permission', '이 API 키로는 선택한 모델을 쓸 수 없습니다. 콘솔에서 권한과 결제 상태를 확인해 주세요.');
-  if (err instanceof Anthropic.RateLimitError) return new GenerationError('rate', '요청 한도에 걸렸습니다. 잠시 후 다시 시도해 주세요.');
-  if (err instanceof Anthropic.BadRequestError) return new GenerationError('bad_request', `요청이 거절되었습니다: ${err.message}`);
-  if (err instanceof Anthropic.InternalServerError) return new GenerationError('overloaded', 'Anthropic 서버가 바쁘거나 오류가 났습니다. 잠시 후 다시 시도해 주세요.');
-  if (err instanceof Anthropic.APIConnectionError) return new GenerationError('network', '네트워크에 연결하지 못했습니다. 인터넷 연결을 확인해 주세요.');
-  if (err instanceof Anthropic.APIError) return new GenerationError('unknown', `API 오류(${err.status ?? '알 수 없음'}): ${err.message}`);
-  return new GenerationError('unknown', err instanceof Error ? err.message : '알 수 없는 오류가 났습니다.');
+  if (err instanceof Anthropic.APIUserAbortError) return new GenerationError('aborted', t('생성을 취소했습니다.'));
+  if (err instanceof Anthropic.AuthenticationError) return new GenerationError('auth', t('API 키가 올바르지 않거나 만료되었습니다. 키를 다시 확인해 주세요.'));
+  if (err instanceof Anthropic.PermissionDeniedError) return new GenerationError('permission', t('이 API 키로는 선택한 모델을 쓸 수 없습니다. 콘솔에서 권한과 결제 상태를 확인해 주세요.'));
+  if (err instanceof Anthropic.RateLimitError) return new GenerationError('rate', t('요청 한도에 걸렸습니다. 잠시 후 다시 시도해 주세요.'));
+  if (err instanceof Anthropic.BadRequestError) return new GenerationError('bad_request', t('요청이 거절되었습니다: {0}', [err.message]));
+  if (err instanceof Anthropic.InternalServerError) return new GenerationError('overloaded', t('Anthropic 서버가 바쁘거나 오류가 났습니다. 잠시 후 다시 시도해 주세요.'));
+  if (err instanceof Anthropic.APIConnectionError) return new GenerationError('network', t('네트워크에 연결하지 못했습니다. 인터넷 연결을 확인해 주세요.'));
+  if (err instanceof Anthropic.APIError) return new GenerationError('unknown', t('API 오류({0}): {1}', [err.status ?? t('알 수 없음'), err.message]));
+  return new GenerationError('unknown', err instanceof Error ? err.message : t('알 수 없는 오류가 났습니다.'));
 }
 
 export async function generateProject({ runtime, apiKey, model, prompt, signal, onProgress }: GenerateOptions): Promise<GenerationResult> {
@@ -99,14 +100,14 @@ export async function generateProject({ runtime, apiKey, model, prompt, signal, 
     const message = await stream.finalMessage();
 
     if (message.stop_reason === 'refusal') {
-      throw new GenerationError('refusal', '모델이 이 요청을 거절했습니다. 흐름의 내용(특히 자연어 지시와 메시지 문구)을 확인해 주세요.');
+      throw new GenerationError('refusal', t('모델이 이 요청을 거절했습니다. 흐름의 내용(특히 자연어 지시와 메시지 문구)을 확인해 주세요.'));
     }
     if (message.stop_reason === 'max_tokens') {
-      throw new GenerationError('truncated', '결과가 출력 한도를 넘어 잘렸습니다. 흐름을 나누거나 단순하게 만든 뒤 다시 시도해 주세요.');
+      throw new GenerationError('truncated', t('결과가 출력 한도를 넘어 잘렸습니다. 흐름을 나누거나 단순하게 만든 뒤 다시 시도해 주세요.'));
     }
     const output = message.parsed_output;
     if (!output) {
-      throw new GenerationError('invalid', '모델의 응답을 프로젝트 형식으로 읽지 못했습니다. 다시 시도해 주세요.');
+      throw new GenerationError('invalid', t('모델의 응답을 프로젝트 형식으로 읽지 못했습니다. 다시 시도해 주세요.'));
     }
 
     const servedByFallback = message.content.some((b) => b.type === 'fallback');

@@ -11,11 +11,12 @@ import { useIssues, useNodeIssues } from '../store/issues';
 import { useProject } from '../store/project';
 import { Button, IconButton, cx } from '../ui/controls';
 import { Field } from './fields';
+import { t } from '../i18n/t';
 
 export function Inspector() {
   const selected = useProject(useShallow((s) => s.nodes.filter((n) => n.selected).map((n) => n.id)));
   return (
-    <aside aria-label="속성" className="h-full min-h-0 overflow-y-auto border-l border-line bg-panel">
+    <aside aria-label={t('속성')} className="h-full min-h-0 overflow-y-auto border-l border-line bg-panel">
       {selected.length === 1 ? (
         <NodeInspector key={selected[0]} id={selected[0]} />
       ) : selected.length > 1 ? (
@@ -53,7 +54,7 @@ function NodeInspector({ id }: { id: string }) {
   const issues = useNodeIssues(id);
   if (!data) return null;
   const def = getDef(data.type);
-  if (!def) return <div className="p-4 text-sm text-danger">알 수 없는 노드 종류입니다.</div>;
+  if (!def) return <div className="p-4 text-sm text-danger">{t('알 수 없는 노드 종류입니다.')}</div>;
 
   const visible = def.fields.filter((f) => fieldVisible(f, data.props));
   const visibleKeys = new Set(visible.map((f) => f.key));
@@ -68,8 +69,8 @@ function NodeInspector({ id }: { id: string }) {
           <span>{categoryLabel(def.category)}</span>
           <span className="font-mono">#{nodeNumber(id)}</span>
           <div className="ml-auto flex">
-            <IconButton icon={CopyPlus} label="복제 (Ctrl+D)" onClick={() => useProject.getState().duplicateSelected()} />
-            <IconButton icon={Trash2} label="삭제 (Delete)" variant="danger" onClick={() => useProject.getState().deleteSelected()} />
+            <IconButton icon={CopyPlus} label={t('복제 (Ctrl+D)')} onClick={() => useProject.getState().duplicateSelected()} />
+            <IconButton icon={Trash2} label={t('삭제 (Delete)')} variant="danger" onClick={() => useProject.getState().deleteSelected()} />
           </div>
         </div>
         <h2 className="mt-1 text-base font-semibold text-fg">{def.label}</h2>
@@ -78,7 +79,7 @@ function NodeInspector({ id }: { id: string }) {
 
       <div className="space-y-4 p-4">
         <IssueList issues={general} />
-        {visible.length === 0 && <p className="text-sm text-fg-muted">설정할 항목이 없습니다.</p>}
+        {visible.length === 0 && <p className="text-sm text-fg-muted">{t('설정할 항목이 없습니다.')}</p>}
         {visible.map((f) => (
           <Field
             key={f.key}
@@ -120,10 +121,8 @@ function Outputs({ id, trigger }: { id: string; trigger: boolean }) {
 
   return (
     <section aria-labelledby={`out-${id}`} className="border-t border-line p-4">
-      <h3 id={`out-${id}`} className="text-sm font-semibold text-fg">출력값</h3>
-      <p className="mt-1 text-xs text-fg-subtle">
-        {trigger ? '이 흐름의 뒤쪽 노드' : '이 노드 뒤에 연결된 노드'}의 입력칸에서 변수로 넣어 쓸 수 있습니다.
-      </p>
+      <h3 id={`out-${id}`} className="text-sm font-semibold text-fg">{t('출력값')}</h3>
+      <p className="mt-1 text-xs text-fg-subtle">{t('{0}의 입력칸에서 변수로 넣어 쓸 수 있습니다.', [trigger ? t('이 흐름의 뒤쪽 노드') : t('이 노드 뒤에 연결된 노드')])}</p>
       <ul className="mt-2 divide-y divide-line">
         {outputs.map((o) => {
           const token = nodeRef(id, o.key);
@@ -131,11 +130,11 @@ function Outputs({ id, trigger }: { id: string; trigger: boolean }) {
             <li key={o.key} className="flex items-center gap-2 py-1.5">
               <div className="min-w-0 flex-1">
                 <div className="truncate text-sm text-fg">
-                  {o.label} <span className="text-xs text-fg-subtle">{TYPE_LABEL[o.type]}</span>
+                  {o.label} <span className="text-xs text-fg-subtle">{t(TYPE_LABEL[o.type])}</span>
                 </div>
                 <code className="block truncate font-mono text-xs text-fg-muted">{token}</code>
               </div>
-              <IconButton icon={copied === token ? Check : Copy} label={copied === token ? '복사됨' : `${token} 복사`} onClick={() => copy(token)} />
+              <IconButton icon={copied === token ? Check : Copy} label={copied === token ? t('복사됨') : t('{0} 복사', [token])} onClick={() => copy(token)} />
             </li>
           );
         })}
@@ -147,10 +146,10 @@ function Outputs({ id, trigger }: { id: string; trigger: boolean }) {
 function MultiInspector({ count }: { count: number }) {
   return (
     <div className="p-4">
-      <h2 className="text-base font-semibold text-fg">노드 {count}개 선택됨</h2>
+      <h2 className="text-base font-semibold text-fg">{t('노드 {0}개 선택됨', [count])}</h2>
       <div className="mt-3 flex gap-2">
-        <Button icon={CopyPlus} onClick={() => useProject.getState().duplicateSelected()}>복제</Button>
-        <Button icon={Trash2} variant="danger" onClick={() => useProject.getState().deleteSelected()}>삭제</Button>
+        <Button icon={CopyPlus} onClick={() => useProject.getState().duplicateSelected()}>{t('복제')}</Button>
+        <Button icon={Trash2} variant="danger" onClick={() => useProject.getState().deleteSelected()}>{t('삭제')}</Button>
       </div>
     </div>
   );
@@ -206,25 +205,23 @@ function ProjectInspector() {
   return (
     <div>
       <header className="border-b border-line p-4">
-        <h2 className="text-base font-semibold text-fg">봇 설정</h2>
-        <p className="mt-1 text-sm text-fg-muted">
-          노드 {counts.nodes}개 · 트리거 {counts.triggers}개. 노드를 선택하면 그 노드의 속성이 여기에 나옵니다.
-        </p>
+        <h2 className="text-base font-semibold text-fg">{t('봇 설정')}</h2>
+        <p className="mt-1 text-sm text-fg-muted">{t('노드 {0}개 · 트리거 {1}개. 노드를 선택하면 그 노드의 속성이 여기에 나옵니다.', [counts.nodes, counts.triggers])}</p>
       </header>
       <div className="space-y-4 p-4">
         <IssueList issues={projectIssues} />
-        {text('name', '봇 이름')}
-        {text('description', '봇 설명', true, 2000)}
-        {select('commandScope', '명령어 등록 범위', [['guild', '테스트 서버 한 곳 (즉시 반영)'], ['global', '모든 서버 (반영까지 최대 1시간)']], '개발 중에는 테스트 서버를 권장합니다.')}
-        {select('locale', '봇이 쓰는 언어', [['ko', '한국어'], ['en', 'English']])}
+        {text('name', t('봇 이름'))}
+        {text('description', t('봇 설명'), true, 2000)}
+        {select('commandScope', t('명령어 등록 범위'), [['guild', t('테스트 서버 한 곳 (즉시 반영)')], ['global', t('모든 서버 (반영까지 최대 1시간)')]], t('개발 중에는 테스트 서버를 권장합니다.'))}
+        {select('locale', t('봇이 쓰는 언어'), [['ko', t('한국어')], ['en', 'English']])}
       </div>
       <section aria-labelledby="shortcuts" className="border-t border-line p-4">
-        <h3 id="shortcuts" className="text-sm font-semibold text-fg">조작법</h3>
+        <h3 id="shortcuts" className="text-sm font-semibold text-fg">{t('조작법')}</h3>
         <dl className="mt-2 grid grid-cols-[auto_1fr] gap-x-4 gap-y-1.5 text-[13px]">
           {SHORTCUTS.map(([k, v]) => (
             <div key={k} className="contents">
-              <dt><kbd className="font-mono text-xs text-fg-muted">{k}</kbd></dt>
-              <dd className="text-fg-muted">{v}</dd>
+              <dt><kbd className="font-mono text-xs text-fg-muted">{t(k)}</kbd></dt>
+              <dd className="text-fg-muted">{t(v)}</dd>
             </div>
           ))}
         </dl>
