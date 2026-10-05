@@ -1,13 +1,12 @@
-import { CircleAlert, FileCode2, FileText, Folder, Hammer, KeyRound, Loader2, MonitorPlay, PackageOpen, Square, TriangleAlert } from 'lucide-react';
-import { useMemo, type ReactNode } from 'react';
+import { CircleAlert, FileCode2, FileText, Folder, Hammer, History, KeyRound, Loader2, MonitorPlay, PackageOpen, Square, TriangleAlert } from 'lucide-react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { useApiKey } from '../ai/key';
 import { MAX_OUTPUT_TOKENS, MODELS, costUSD, formatUSD, modelInfo, type ModelId } from '../ai/models';
 import type { GeneratedFile } from '../ai/output';
 import { desktop } from '../platform';
-import { compilePrompt, estimateTokens } from '../compiler/compile';
-import { useGeneration, type GenerationRecord } from '../store/generation';
+import { estimateTokens } from '../compiler/compile';
+import { useFlowPrompt, useGeneration, type GenerationRecord } from '../store/generation';
 import { useIssues } from '../store/issues';
-import { useProject } from '../store/project';
 import { useUI } from '../store/ui';
 import { Button, cx } from '../ui/controls';
 import { downloadBlob, safeFileName } from '../ui/files';
@@ -22,18 +21,13 @@ async function downloadZip(record: GenerationRecord) {
   }
 }
 
-function Toolbar() {
-  const { status, model, setModel, start, cancel, result } = useGeneration();
+/** `shown`: the result on screen, if any. `current`: there is a result made from the flow that is open now. */
+function Toolbar({ inputTokens, shown, current }: { inputTokens: number; shown: GenerationRecord | null; current: boolean }) {
+  const { status, model, setModel, start, cancel } = useGeneration();
   const key = useApiKey((s) => s.label);
   const errors = useIssues((s) => s.errors);
-  const rev = useIssues((s) => s.rev);
   const running = status === 'running';
 
-  // Input size for the cost estimate; recomputed when the flow changes.
-  const inputTokens = useMemo(() => {
-    const { meta, nodes, edges } = useProject.getState();
-    return estimateTokens(compilePrompt(meta, nodes, edges, 'api').text) + 400;
-  }, [rev]);
   const low = costUSD(model, inputTokens, 8_000);
   const high = costUSD(model, inputTokens, MAX_OUTPUT_TOKENS);
 
@@ -62,17 +56,17 @@ function Toolbar() {
         <Button size="sm" variant="ghost" icon={KeyRound} onClick={() => useUI.getState().setKeyDialogOpen(true)}>
           {key ?? 'API 키 입력'}
         </Button>
-        {result && !running && (
-          <Button size="sm" icon={PackageOpen} onClick={() => downloadZip(result)}>zip 받기</Button>
+        {shown && !running && (
+          <Button size="sm" icon={PackageOpen} onClick={() => downloadZip(shown)}>zip 받기</Button>
         )}
-        {desktop && result && !running && (
+        {desktop && current && !running && (
           <Button size="sm" icon={MonitorPlay} onClick={() => useUI.getState().openBottom('bot')}>이 PC에서 실행</Button>
         )}
         {running ? (
           <Button size="sm" variant="danger" icon={Square} onClick={cancel}>취소</Button>
         ) : (
           <Button size="sm" variant="primary" icon={Hammer} onClick={onGenerate} disabled={errors > 0}>
-            {result ? '다시 생성' : '봇 코드 생성'}
+            {current ? '다시 생성' : '봇 코드 생성'}
           </Button>
         )}
       </div>
@@ -97,7 +91,7 @@ function Banner({ tone, children }: { tone: 'danger' | 'warning' | 'info'; child
 }
 
 function StatusBanners() {
-  const { status, progress, error } = useGeneration();
+  const { status, error } = useGeneration();
   const errors = useIssues((s) => s.errors);
   return (
     <>
@@ -106,15 +100,6 @@ function StatusBanners() {
           <TriangleAlert size={15} className="shrink-0" aria-hidden />
           <span>흐름에 오류가 {errors}개 있어 생성할 수 없습니다.</span>
           <button type="button" onClick={() => useUI.getState().openBottom('problems')} className="ml-auto font-medium underline underline-offset-2">문제 보기</button>
-        </Banner>
-      )}
-      {status === 'running' && progress && (
-        <Banner tone="info">
-          <Loader2 size={15} className="shrink-0 animate-spin text-accent-fg" aria-hidden />
-          <span className="tabular-nums">
-            생성 중 · 파일 {progress.files}개 · {progress.chars.toLocaleString()}자
-            {progress.current && <> · <code className="font-mono text-xs">{progress.current}</code></>}
-          </span>
         </Banner>
       )}
       {status === 'error' && error && (
@@ -127,6 +112,57 @@ function StatusBanners() {
         </Banner>
       )}
     </>
+  );
+}
+
+function StaleNotice({ record, shown, onToggle }: { record: GenerationRecord; shown: boolean; onToggle: () => void }) {
+  return (
+    <Banner tone={shown ? 'warning' : 'info'}>
+      <History size={15} className="shrink-0" aria-hidden />
+      <span>
+        {shown ? '이 결과' : '마지막 결과'}(‘{record.projectName}’, {new Date(record.createdAt).toLocaleString()})는 지금 흐름으로 만든 것이 아닙니다.
+        {shown ? ' 지금 흐름과 다를 수 있습니다.' : ' 그 뒤 흐름을 고쳤거나 다른 프로젝트를 열었습니다. 생성하면 지금 흐름으로 새로 만듭니다.'}
+      </span>
+      <button type="button" onClick={onToggle} className="ml-auto shrink-0 font-medium underline underline-offset-2">
+        {shown ? '숨기기' : '이전 결과 보기'}
+      </button>
+    </Banner>
+  );
+}
+
+const clock = (ms: number) => {
+  const s = Math.floor(ms / 1000);
+  return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+};
+
+function Running() {
+  const progress = useGeneration((s) => s.progress);
+  const startedAt = useGeneration((s) => s.startedAt);
+  const [now, setNow] = useState(Date.now);
+  useEffect(() => {
+    const t = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(t);
+  }, []);
+  // Claude thinks before it writes, so for a while nothing streams in.
+  const writing = !!progress && progress.chars > 0;
+
+  return (
+    <div className="h-full overflow-y-auto p-4 text-sm">
+      <p className="flex items-center gap-2 text-fg">
+        <Loader2 size={15} className="shrink-0 animate-spin text-accent-fg" aria-hidden />
+        <span role="status" className="font-medium">{writing ? '파일을 쓰고 있습니다' : 'Claude가 흐름을 읽고 코드를 설계하고 있습니다'}</span>
+        {startedAt !== null && <span className="text-fg-subtle tabular-nums">{clock(Math.max(0, now - startedAt))}</span>}
+      </p>
+      {writing ? (
+        <p className="mt-1.5 text-fg-muted tabular-nums">
+          파일 {progress.files}개 · {progress.chars.toLocaleString()}자
+          {progress.current && <> · <code className="font-mono text-xs">{progress.current}</code></>}
+        </p>
+      ) : (
+        <p className="mt-1.5 max-w-prose text-fg-muted">설계가 끝나면 파일이 하나씩 나타납니다. 보통 1~3분 걸리고, 흐름이 크면 더 걸립니다.</p>
+      )}
+      <p className="mt-3 text-xs text-fg-subtle">기다리는 동안 다른 탭을 써도 됩니다.</p>
+    </div>
   );
 }
 
@@ -280,11 +316,23 @@ function EmptyState() {
 
 export function GenerateView() {
   const result = useGeneration((s) => s.result);
+  const running = useGeneration((s) => s.status === 'running');
+  const prompt = useFlowPrompt();
+  const inputTokens = useMemo(() => estimateTokens(prompt.text) + 400, [prompt]);
+  // A result made from another flow (another project, or this one before an edit) stays hidden unless asked for.
+  const current = result?.flowKey === prompt.key ? result : null;
+  const stale = result && !current ? result : null;
+  const [peekAt, setPeekAt] = useState<number | null>(null);
+  const shown = running ? null : current ?? (stale && peekAt === stale.createdAt ? stale : null);
+
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <Toolbar />
+      <Toolbar inputTokens={inputTokens} shown={shown} current={!!current} />
       <StatusBanners />
-      {result ? <Result record={result} /> : <EmptyState />}
+      {stale && !running && (
+        <StaleNotice record={stale} shown={shown === stale} onToggle={() => setPeekAt(shown === stale ? null : stale.createdAt)} />
+      )}
+      {running ? <Running /> : shown ? <Result record={shown} /> : <EmptyState />}
     </div>
   );
 }

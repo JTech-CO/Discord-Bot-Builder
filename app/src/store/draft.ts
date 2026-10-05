@@ -103,7 +103,7 @@ export const useDraft = create<DraftState>((set) => ({
     controller.abort();
     controller = null;
     runId++;
-    if (desktop) void desktop.ai.cancel();
+    if (desktop) void desktop.ai.cancel('draft');
     set({ status: 'idle', error: null });
   },
 

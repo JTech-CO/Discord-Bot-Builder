@@ -39,7 +39,7 @@ const PROBE = `(async () => {
   };
 })()`;
 
-// A small generated project so the "봇 실행" tab has something to show in screenshots.
+// A small generated project for screenshots. It has no flow key, so the tabs show it as a result from another flow.
 const SAMPLE = {
   projectName: '주사위 봇', model: 'claude-opus-5-5', servedBy: null, createdAt: Date.now(), usage: { input: 2100, output: 3200 },
   files: [

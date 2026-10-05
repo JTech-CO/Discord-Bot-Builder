@@ -109,9 +109,8 @@ handle(
   },
 );
 
-handle('ai:cancel', None, () => {
-  generation?.abort();
-  drafting?.abort();
+handle('ai:cancel', z.enum(['generate', 'draft']), (what) => {
+  (what === 'generate' ? generation : drafting)?.abort();
 });
 
 handle('project:chooseFolder', z.string().max(100), async (name) => {

@@ -4,7 +4,7 @@ import { fromFile } from '../flow/file';
 import { DEFAULT_META } from '../flow/model';
 import { NODE_DEFS, defaultProps, portsOf } from '../nodes/registry';
 import { DISCORD_TOKEN_LIKE, E, N } from '../test/graph';
-import { compilePrompt } from './compile';
+import { compilePrompt, flowKey } from './compile';
 
 const headings = (text: string) => text.split('\n').filter((l) => /^#{1,3} /.test(l));
 
@@ -66,5 +66,21 @@ describe('compilePrompt', () => {
       expect(r.stepCount).toBe(defs.length);
       expect(r.omitted).toEqual([]);
     }
+  });
+});
+
+describe('flowKey', () => {
+  it('keeps a result current when nodes move, not when the flow or project changes', () => {
+    const loaded = fromFile(diceExample);
+    if (!loaded.ok) throw new Error(loaded.error);
+    const { meta, nodes, edges } = loaded.project;
+    const key = (m = meta, n = nodes) => flowKey(compilePrompt(m, n, edges, 'api').text);
+
+    const moved = nodes.map((n) => ({ ...n, position: { x: n.position.x + 500, y: n.position.y - 80 } }));
+    expect(key(meta, moved)).toBe(key());
+
+    const edited = nodes.map((n) => (n.data.props.content ? { ...n, data: { ...n.data, props: { ...n.data.props, content: '다른 문구' } } } : n));
+    expect(key(meta, edited)).not.toBe(key());
+    expect(key({ ...meta, name: '끝말잇기 봇' })).not.toBe(key());
   });
 });

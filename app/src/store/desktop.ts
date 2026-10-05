@@ -10,6 +10,8 @@ const MAX_LOG_LINES = 2000;
 interface DesktopState {
   node: NodeInfo | null;
   dir: string | null;
+  /** Name of the project whose result was saved to `dir`; another project doesn't reuse that folder. */
+  dirProject: string | null;
   /** Env var names that have an encrypted value stored for `dir`. */
   envSet: string[];
   bot: BotState;
@@ -24,17 +26,21 @@ interface DesktopState {
   clearLogs: () => void;
 }
 
-const readDir = () => {
+const readDir = (): { dir: string | null; dirProject: string | null } => {
   try {
-    return localStorage.getItem(DIR_KEY);
+    const saved: unknown = JSON.parse(localStorage.getItem(DIR_KEY) ?? 'null');
+    if (saved && typeof saved === 'object' && 'dir' in saved && 'project' in saved && typeof saved.dir === 'string' && typeof saved.project === 'string') {
+      return { dir: saved.dir, dirProject: saved.project };
+    }
   } catch {
-    return null;
+    // Unreadable, or a bare path saved before folders were tied to a project: forget it.
   }
+  return { dir: null, dirProject: null };
 };
 
-const writeDir = (dir: string) => {
+const writeDir = (dir: string, project: string) => {
   try {
-    localStorage.setItem(DIR_KEY, dir);
+    localStorage.setItem(DIR_KEY, JSON.stringify({ dir, project }));
   } catch {
     // ignore
   }
@@ -60,7 +66,7 @@ const fail = (err: unknown) => useUI.getState().notify(err instanceof Error ? er
 
 export const useDesktop = create<DesktopState>((set, get) => ({
   node: null,
-  dir: readDir(),
+  ...readDir(),
   envSet: [],
   bot: { status: 'idle', dir: null },
   logs: [],
@@ -74,7 +80,7 @@ export const useDesktop = create<DesktopState>((set, get) => ({
     try {
       set({ envSet: await desktop.env.names(dir) });
     } catch {
-      set({ dir: null, envSet: [] }); // folder no longer approved (e.g. app data reset)
+      set({ dir: null, dirProject: null, envSet: [] }); // folder no longer approved (e.g. app data reset)
     }
   },
 
@@ -87,8 +93,8 @@ export const useDesktop = create<DesktopState>((set, get) => ({
       const { entries } = await desktop.project.inspect(dir);
       if (entries > 0 && !window.confirm(`이 폴더에 이미 항목이 ${entries}개 있습니다. 같은 이름의 파일은 덮어씁니다. 계속할까요?\n\n${dir}`)) return;
       const { written } = await desktop.project.write(dir, result.files);
-      writeDir(dir);
-      set({ dir, envSet: await desktop.env.names(dir) });
+      writeDir(dir, result.projectName);
+      set({ dir, dirProject: result.projectName, envSet: await desktop.env.names(dir) });
       useUI.getState().notify(`파일 ${written}개를 저장했습니다.`);
     } catch (err) {
       fail(err);
