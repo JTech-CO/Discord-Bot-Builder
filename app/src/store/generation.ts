@@ -1,10 +1,11 @@
+import { useMemo } from 'react';
 import { z } from 'zod';
 import { create } from 'zustand';
 import type { GenerationErrorKind, GenerationProgress, GenerationResult } from '../ai/generate';
 import { useApiKey } from '../ai/key';
 import { DEFAULT_MODEL, MODELS, type ModelId } from '../ai/models';
 import { checkOutput, isSafePath } from '../ai/output';
-import { compilePrompt } from '../compiler/compile';
+import { compilePrompt, flowKey } from '../compiler/compile';
 import { desktop } from '../platform';
 import { useIssues } from './issues';
 import { useProject } from './project';
@@ -16,6 +17,8 @@ const MAX_STORED_CHARS = 4_000_000;
 // The saved record is re-validated on load: localStorage is outside the app's control.
 const GenerationRecord = z.object({
   projectName: z.string(),
+  // Records saved before flow keys existed get '' and count as made from another flow.
+  flowKey: z.string().default(''),
   model: z.string(),
   servedBy: z.string().nullable(),
   createdAt: z.number(),
@@ -32,6 +35,8 @@ interface GenerationState {
   status: 'idle' | 'running' | 'done' | 'error';
   model: ModelId;
   progress: GenerationProgress | null;
+  /** When the current run started, for the elapsed-time display. */
+  startedAt: number | null;
   error: { kind: ErrorKind; message: string } | null;
   result: GenerationRecord | null;
   /** Selected file path in the result view; null shows the summary. */
@@ -40,6 +45,23 @@ interface GenerationState {
   select: (path: string | null) => void;
   start: () => Promise<void>;
   cancel: () => void;
+}
+
+/** The current flow's API prompt and its key, recompiled only when props, edges or settings change. */
+export function useFlowPrompt(): { text: string; key: string } {
+  const rev = useIssues((s) => s.rev);
+  return useMemo(() => {
+    const { meta, nodes, edges } = useProject.getState();
+    const text = compilePrompt(meta, nodes, edges, 'api').text;
+    return { text, key: flowKey(text) };
+  }, [rev]);
+}
+
+/** The last result, but only when it was made from the flow that is open now. */
+export function useCurrentResult(): GenerationRecord | null {
+  const result = useGeneration((s) => s.result);
+  const { key } = useFlowPrompt();
+  return result?.flowKey === key ? result : null;
 }
 
 function load<T>(key: string, parse: (raw: string) => T | null): T | null {
@@ -88,6 +110,7 @@ export const useGeneration = create<GenerationState>((set, get) => ({
   status: storedRecord ? 'done' : 'idle',
   model: storedModel ?? DEFAULT_MODEL,
   progress: null,
+  startedAt: null,
   error: null,
   result: storedRecord,
   selected: null,
@@ -120,7 +143,7 @@ export const useGeneration = create<GenerationState>((set, get) => ({
     controller = new AbortController();
     const id = ++runId;
     const model = get().model;
-    set({ status: 'running', error: null, progress: { chars: 0, files: 0, current: null } });
+    set({ status: 'running', error: null, progress: { chars: 0, files: 0, current: null }, startedAt: Date.now() });
 
     try {
       const onProgress = (progress: GenerationProgress) => id === runId && set({ progress });
@@ -133,20 +156,21 @@ export const useGeneration = create<GenerationState>((set, get) => ({
       const checked = checkOutput(r.output, compiled.requirements.env.map((e) => e.name));
       const record: GenerationRecord = {
         projectName: meta.name,
+        flowKey: flowKey(compiled.text),
         model: r.model,
         servedBy: r.servedBy,
         createdAt: Date.now(),
         usage: r.usage,
         ...checked,
       };
-      set({ status: 'done', result: record, selected: null, progress: null });
+      set({ status: 'done', result: record, selected: null, progress: null, startedAt: null });
       const json = JSON.stringify(record);
       if (json.length <= MAX_STORED_CHARS) save(RECORD_KEY, json);
     } catch (err) {
       if (id !== runId) return;
       const e = isGenerationError(err) ? err : { kind: 'unknown' as const, message: String(err) };
-      if (e.kind === 'aborted') set({ status: get().result ? 'done' : 'idle', progress: null, error: null });
-      else set({ status: 'error', progress: null, error: { kind: e.kind, message: e.message } });
+      if (e.kind === 'aborted') set({ status: get().result ? 'done' : 'idle', progress: null, startedAt: null, error: null });
+      else set({ status: 'error', progress: null, startedAt: null, error: { kind: e.kind, message: e.message } });
     } finally {
       if (id === runId) controller = null;
     }
@@ -155,10 +179,10 @@ export const useGeneration = create<GenerationState>((set, get) => ({
   cancel: () => {
     if (!controller) return;
     controller.abort();
-    if (desktop) void desktop.ai.cancel();
+    if (desktop) void desktop.ai.cancel('generate');
     controller = null;
     runId++;
     // Return to the previous state right away; the aborted request finishes in the background.
-    set({ status: get().result ? 'done' : 'idle', progress: null, error: null });
+    set({ status: get().result ? 'done' : 'idle', progress: null, startedAt: null, error: null });
   },
 }));

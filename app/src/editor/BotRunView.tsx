@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 import { desktop } from '../platform';
 import type { BotStatus } from '../platform/api';
 import { useDesktop, requiredEnv } from '../store/desktop';
-import { useGeneration } from '../store/generation';
+import { useCurrentResult, useGeneration } from '../store/generation';
 import { useUI } from '../store/ui';
 import { Button, cx } from '../ui/controls';
 
@@ -55,8 +55,11 @@ function EnvRow({ name, stored }: { name: string; stored: boolean }) {
 }
 
 function Controls() {
-  const { node, dir, envSet, bot, chooseAndSave, saveAgain, start, stop } = useDesktop();
-  const result = useGeneration((s) => s.result);
+  const { node, dir: savedDir, dirProject, envSet, bot, chooseAndSave, saveAgain, start, stop } = useDesktop();
+  const anyResult = useGeneration((s) => s.result !== null);
+  const result = useCurrentResult();
+  // The saved folder belongs to the project it was saved from; another project picks its own.
+  const dir = result && dirProject === result.projectName ? savedDir : null;
   const env = result ? requiredEnv() : [];
   const active = ACTIVE.includes(bot.status);
 
@@ -83,9 +86,9 @@ function Controls() {
         <h3 id="bot-folder" className="text-xs font-semibold text-fg-subtle">프로젝트 폴더</h3>
         {!result ? (
           <p className="mt-1.5 text-fg-muted">
-            먼저{' '}
+            {anyResult ? '마지막 결과는 지금 흐름으로 만든 것이 아닙니다. ' : '먼저 '}
             <button type="button" className="text-accent-fg underline underline-offset-2" onClick={() => useUI.getState().openBottom('generate')}>생성 탭</button>
-            에서 봇 코드를 만드세요.
+            에서 {anyResult ? '지금 흐름으로 다시 만드세요.' : '봇 코드를 만드세요.'}
           </p>
         ) : (
           <>
@@ -117,7 +120,7 @@ function Controls() {
         </section>
       )}
 
-      {dir && (
+      {(dir || active) && (
         <div className="flex items-center gap-2">
           {active ? (
             <Button variant="danger" icon={Square} onClick={() => void stop()}>중지</Button>

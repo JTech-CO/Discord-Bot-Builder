@@ -243,6 +243,16 @@ ${output}
 }
 
 /** Rough token estimate: ~4 ASCII characters per token, ~1 token per other character. */
+/**
+ * Identifies the flow a prompt was compiled from (FNV-1a over the text). Node positions aren't in the
+ * prompt, so moving nodes around keeps the key; editing props, edges or project settings changes it.
+ */
+export function flowKey(prompt: string): string {
+  let h = 0x811c9dc5;
+  for (let i = 0; i < prompt.length; i++) h = Math.imul(h ^ prompt.charCodeAt(i), 0x01000193);
+  return `${prompt.length.toString(36)}-${(h >>> 0).toString(36)}`;
+}
+
 export function estimateTokens(text: string): number {
   let ascii = 0;
   for (let i = 0; i < text.length; i++) if (text.charCodeAt(i) < 128) ascii++;

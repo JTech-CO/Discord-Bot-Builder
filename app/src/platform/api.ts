@@ -40,7 +40,8 @@ export interface DesktopAPI {
     clearKey(): Promise<void>;
     generate(req: { model: ModelId; prompt: string }): Promise<DesktopGenerateResult>;
     draft(req: { model: ModelId; description: string; locale: 'ko' | 'en' }): Promise<DesktopDraftResult>;
-    cancel(): Promise<void>;
+    /** Aborts the running generation or draft request; the other one keeps going. */
+    cancel(what: 'generate' | 'draft'): Promise<void>;
     onProgress(cb: (p: GenerationProgress) => void): () => void;
   };
   project: {

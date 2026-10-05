@@ -20,7 +20,7 @@ const api: DesktopAPI = {
     clearKey: () => invoke('ai:clearKey'),
     generate: (req) => invoke('ai:generate', req),
     draft: (req) => invoke('ai:draft', req),
-    cancel: () => invoke('ai:cancel'),
+    cancel: (what) => invoke('ai:cancel', what),
     onProgress: subscribe('ai:progress'),
   },
   project: {
