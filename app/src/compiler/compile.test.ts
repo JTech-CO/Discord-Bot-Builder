@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { diceExample } from '../flow/examples';
+import { diceExample, diceExampleEn } from '../flow/examples';
+import { validate } from '../flow/validate';
 import { fromFile } from '../flow/file';
 import { DEFAULT_META } from '../flow/model';
 import { NODE_DEFS, defaultProps, portsOf } from '../nodes/registry';
@@ -67,6 +68,16 @@ describe('compilePrompt', () => {
       expect(r.stepCount).toBe(defs.length);
       expect(r.omitted).toEqual([]);
     }
+  });
+});
+
+describe('examples', () => {
+  it('has an English dice example that is valid and speaks English', () => {
+    const loaded = fromFile(diceExampleEn);
+    if (!loaded.ok) throw new Error(loaded.error);
+    expect(loaded.project.meta.locale).toBe('en');
+    expect(validate(loaded.project.nodes, loaded.project.edges)).toEqual([]);
+    expect(JSON.stringify(diceExampleEn)).not.toMatch(/[가-힣]/);
   });
 });
 
