@@ -1,3 +1,4 @@
+import type { Lang } from '../i18n/t';
 import type { ProjectFile } from './file';
 
 export const diceExample: ProjectFile = {
@@ -39,3 +40,25 @@ export const diceExample: ProjectFile = {
     { source: 'n4', sourcePort: 'false', target: 'n7' },
   ],
 };
+
+// The same flow for the English UI: its text is the bot's own, so it is written in English rather than translated.
+const ENGLISH_PROPS: Record<string, ProjectFile['nodes'][number]['props']> = {
+  n1: { name: 'dice', description: 'Rolls a die' },
+  n6: { content: 'You can roll again in {{n2.remaining}} seconds.' },
+  n5: { embedDescription: '{{n1.user}}, that is a high roll!' },
+  n7: { content: '🎲 {{n3.result}}… Better luck next time.' },
+};
+
+export const diceExampleEn: ProjectFile = {
+  ...diceExample,
+  meta: {
+    ...diceExample.meta,
+    name: 'Dice bot',
+    description: 'Type /dice to roll a number from 1 to 6. There is a 5-second cooldown.',
+    locale: 'en',
+  },
+  nodes: diceExample.nodes.map((n) => ({ ...n, props: { ...n.props, ...ENGLISH_PROPS[n.id] } })),
+};
+
+/** The example project in the UI language. */
+export const diceExampleFor = (lang: Lang): ProjectFile => (lang === 'en' ? diceExampleEn : diceExample);

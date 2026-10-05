@@ -14,7 +14,15 @@ export const list = (p: Props, key: string): string[] =>
 export const rows = (p: Props, key: string): TableRow[] =>
   Array.isArray(p[key]) ? (p[key] as unknown[]).filter((v): v is TableRow => typeof v === 'object' && v !== null) : [];
 
-export const clip = (s: string, n = 36): string => (s.length > n ? `${s.slice(0, n - 1)}…` : s);
+/** Shortens {{n3.result}} to #3.result and {{env.KEY}} to $KEY for display. */
+export const prettyRefs = (s: string) =>
+  s.replace(/\{\{\s*n(\d+)\.([^{}\s]+)\s*\}\}/g, '#$1.$2').replace(/\{\{\s*env\.([A-Z0-9_]+)\s*\}\}/g, '$$$1');
+
+/** Display text cut to n characters. References are shortened first so a cut never leaves half of one. */
+export const clip = (s: string, n = 36): string => {
+  const short = prettyRefs(s);
+  return short.length > n ? `${short.slice(0, n - 1)}…` : short;
+};
 
 export const is = (key: string, ...values: string[]) => (p: Props) => values.includes(str(p, key));
 

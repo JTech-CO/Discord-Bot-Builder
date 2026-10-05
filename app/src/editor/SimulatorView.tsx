@@ -12,7 +12,7 @@ import { useProject } from '../store/project';
 import { useSimulator } from '../store/simulator';
 import { useUI } from '../store/ui';
 import { Button, cx } from '../ui/controls';
-import { prettyRefs } from './BotNodeCard';
+import { prettyRefs } from '../nodes/helpers';
 import { t } from '../i18n/t';
 import { tx } from '../i18n/tx';
 

@@ -3,7 +3,7 @@ import {
 } from '@xyflow/react';
 import { Maximize, Minus, Plus, Wand } from 'lucide-react';
 import { useCallback, useEffect, useMemo, type DragEvent } from 'react';
-import { diceExample } from '../flow/examples';
+import { diceExampleFor } from '../flow/examples';
 import { fromFile } from '../flow/file';
 import { nodeNumber, type BotNode } from '../flow/model';
 import { getDef } from '../nodes/registry';
@@ -11,9 +11,10 @@ import { useProject } from '../store/project';
 import { useSimulator } from '../store/simulator';
 import { useUI } from '../store/ui';
 import { Button, IconButton } from '../ui/controls';
-import BotNodeCard, { prettyRefs } from './BotNodeCard';
+import BotNodeCard from './BotNodeCard';
+import { prettyRefs } from '../nodes/helpers';
 import { openDraft } from './DraftDialog';
-import { t } from '../i18n/t';
+import { t, useLang } from '../i18n/t';
 import { tx } from '../i18n/tx';
 
 export const NODE_DRAG_MIME = 'application/x-dbb-node';
@@ -122,7 +123,7 @@ function ZoomControls() {
 function EmptyState() {
   const rf = useReactFlow();
   const loadExample = () => {
-    const result = fromFile(diceExample);
+    const result = fromFile(diceExampleFor(useLang.getState().lang));
     if (!result.ok) return;
     useProject.getState().load(result.project);
     requestAnimationFrame(() => rf.fitView({ padding: 0.2, duration: 200 }));

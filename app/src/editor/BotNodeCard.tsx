@@ -3,13 +3,10 @@ import { CircleAlert, TriangleAlert } from 'lucide-react';
 import { memo } from 'react';
 import { nodeNumber, type BotNode } from '../flow/model';
 import { categoryColor, categoryLabel, getDef, isTrigger, portsOf } from '../nodes/registry';
+import { prettyRefs } from '../nodes/helpers';
 import { useNodeIssues } from '../store/issues';
 import { cx } from '../ui/controls';
 import { t, useLang } from '../i18n/t';
-
-/** Shortens {{n3.result}} to #3.result and {{env.KEY}} to $KEY for display on the card. */
-export const prettyRefs = (s: string) =>
-  s.replace(/\{\{\s*n(\d+)\.([^{}\s]+)\s*\}\}/g, '#$1.$2').replace(/\{\{\s*env\.([A-Z0-9_]+)\s*\}\}/g, '$$$1');
 
 function BotNodeCard({ id, data, selected }: NodeProps<BotNode>) {
   useLang((s) => s.lang); // memoized by React Flow, so it re-renders itself on a language switch

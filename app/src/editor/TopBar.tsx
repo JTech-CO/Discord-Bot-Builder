@@ -4,7 +4,7 @@ import {
   Hammer, Play, Redo2, ScrollText, Sun, TriangleAlert, Undo2, Wand, Workflow,
 } from 'lucide-react';
 import { useRef, type ChangeEvent } from 'react';
-import { diceExample } from '../flow/examples';
+import { diceExampleFor } from '../flow/examples';
 import { MAX_FILE_BYTES, fromFile, parseProjectText, toFile, type LoadResult } from '../flow/file';
 import { useIssues } from '../store/issues';
 import { useProject } from '../store/project';
@@ -129,7 +129,7 @@ export function TopBar() {
           { label: t('파일 열기…'), icon: FolderOpen, onSelect: () => fileInput.current?.click() },
           { label: t('파일로 저장'), icon: Download, onSelect: save },
           'divider',
-          { label: t('예제: 주사위 봇'), onSelect: () => applyLoad(fromFile(diceExample), t('예제')) },
+          { label: t('예제: 주사위 봇'), onSelect: () => applyLoad(fromFile(diceExampleFor(useLang.getState().lang)), t('예제')) },
         ]}
       />
       <input ref={fileInput} type="file" accept=".json,application/json" className="hidden" onChange={onFile} tabIndex={-1} aria-hidden />
