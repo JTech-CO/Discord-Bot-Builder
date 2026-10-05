@@ -184,6 +184,9 @@ export const wait: NodeDef = {
   requires: () => ({ slow: true }),
 };
 
+/** Cooldowns at least this long (daily rewards and the like) must survive restarts; shorter ones are anti-spam. */
+const PERSISTENT_COOLDOWN_SECONDS = 3600;
+
 export const cooldown: NodeDef = {
   type: 'logic.cooldown',
   category: 'logic',
@@ -223,8 +226,10 @@ export const cooldown: NodeDef = {
   spec: (p) => {
     const s = num(p, 'seconds') ?? 10;
     const who = { user: 'the same user', server: 'anyone in the same server', global: 'anyone' }[str(p, 'scope') || 'user'];
-    return `Cooldown of ${s} seconds for this step, kept in memory. If ${who} passed this step less than ${s} seconds ago, take exit "blocked" with output remaining = seconds left, rounded up. Otherwise record the time and take exit "pass".`;
+    const kept = s >= PERSISTENT_COOLDOWN_SECONDS ? 'kept in the persistent data store so restarting the bot does not reset it' : 'kept in memory';
+    return `Cooldown of ${s} seconds for this step, ${kept}. If ${who} passed this step less than ${s} seconds ago, take exit "blocked" with output remaining = seconds left, rounded up. Otherwise record the time and take exit "pass".`;
   },
+  requires: (p) => ((num(p, 'seconds') ?? 10) >= PERSISTENT_COOLDOWN_SECONDS ? { storage: true } : {}),
 };
 
 export const permission: NodeDef = {

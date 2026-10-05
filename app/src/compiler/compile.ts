@@ -224,7 +224,7 @@ ${flowText}
 - Keep each flow run's step outputs in a context object for that run, so simultaneous runs never share values.
 - Wrap every flow run in error handling: log the error with the flow and step number, and if an interaction has not been answered yet, reply with a short ephemeral error message in ${language}. One failure must never crash the process.
 - Convert placeholder values before use: numbers with Number(), Discord IDs as strings, mentions and links from their objects.
-- Keep in-memory state (such as cooldowns) in Maps and remove expired entries.
+- Keep in-memory state (such as short cooldowns) in Maps and remove expired entries.
 - Log a line when the bot is ready, including its tag${hasSlash ? ' and the registered commands' : ''}.
 - Write code comments in English. Keep functions small and readable.
 

@@ -69,6 +69,20 @@ describe('compilePrompt', () => {
   });
 });
 
+describe('cooldown storage', () => {
+  it('persists long cooldowns across restarts and keeps short ones in memory', () => {
+    const flow = (seconds: number) =>
+      compilePrompt(DEFAULT_META, [N('n1', 'trigger.slashCommand', { name: 'x', description: 'd' }), N('n2', 'logic.cooldown', { seconds, scope: 'user' })], [E('n1', 'next', 'n2')], 'api');
+    const short = flow(5);
+    expect(short.requirements.storage).toBe(false);
+    expect(short.text).toContain('kept in memory');
+    const daily = flow(86400);
+    expect(daily.requirements.storage).toBe(true);
+    expect(daily.text).toContain('restarting the bot does not reset it');
+    expect(daily.text).toContain('data/store.json');
+  });
+});
+
 describe('flowKey', () => {
   it('keeps a result current when nodes move, not when the flow or project changes', () => {
     const loaded = fromFile(diceExample);
