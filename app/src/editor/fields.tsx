@@ -8,6 +8,7 @@ import { list, rows } from '../nodes/helpers';
 import type { FieldDef, ListField, TableColumn, TableField, TableRow, TextField, ValueType } from '../nodes/types';
 import { useProject } from '../store/project';
 import { cx, onMenuKeyDown, usePopover } from '../ui/controls';
+import { t } from '../i18n/t';
 
 const inputBase =
   'w-full rounded-md border bg-field px-2.5 text-sm text-fg placeholder:text-fg-subtle focus:border-accent focus:outline-none';
@@ -68,7 +69,7 @@ export function Field({ field, value, onChange, nodeId, issues }: FieldProps) {
         <div className="flex gap-2">
           <input
             type="color"
-            aria-label={`${field.label} 선택`}
+            aria-label={t('{0} 선택', [field.label])}
             value={/^#[0-9a-fA-F]{6}$/.test(hex) ? hex : '#000000'}
             onChange={(e) => onChange(e.target.value.toUpperCase())}
             className="h-8 w-10 shrink-0 cursor-pointer rounded-md border border-line bg-field p-0.5"
@@ -90,7 +91,7 @@ export function Field({ field, value, onChange, nodeId, issues }: FieldProps) {
     <div>
       <label htmlFor={id} className="mb-1 flex items-baseline gap-1.5 text-sm text-fg">
         {field.label}
-        {field.required && <span className="text-xs text-fg-subtle">필수</span>}
+        {field.required && <span className="text-xs text-fg-subtle">{t('필수')}</span>}
       </label>
       {control}
       {field.help && <p id={`${id}-help`} className="mt-1 text-xs text-fg-subtle">{field.help}</p>}
@@ -171,8 +172,8 @@ function TextControl({ id, invalid, describedBy, field, value, onChange, nodeId 
   );
 }
 
-const typeOk = (accepts: ValueType[] | undefined, t: ValueType) =>
-  !accepts || t === 'any' || accepts.includes(t) || (t === 'member' && accepts.includes('user'));
+const typeOk = (accepts: ValueType[] | undefined, type: ValueType) =>
+  !accepts || type === 'any' || accepts.includes(type) || (type === 'member' && accepts.includes('user'));
 
 function RefMenu({ nodeId, accepts, onPick }: { nodeId: string; accepts?: ValueType[]; onPick: (token: string) => void }) {
   const { open, setOpen, root } = usePopover();
@@ -195,8 +196,8 @@ function RefMenu({ nodeId, accepts, onPick }: { nodeId: string; accepts?: ValueT
       <button
         type="button"
         data-popover-trigger
-        aria-label="변수 넣기"
-        title="앞 노드의 값을 넣습니다"
+        aria-label={t('변수 넣기')}
+        title={t('앞 노드의 값을 넣습니다')}
         aria-haspopup="menu"
         aria-expanded={open}
         onClick={() => setOpen(!open)}
@@ -208,14 +209,12 @@ function RefMenu({ nodeId, accepts, onPick }: { nodeId: string; accepts?: ValueT
         <div
           ref={menu}
           role="menu"
-          aria-label="넣을 값"
+          aria-label={t('넣을 값')}
           onKeyDown={onMenuKeyDown}
           className="absolute top-full right-0 z-50 mt-1 max-h-80 w-72 overflow-y-auto rounded-lg border border-line bg-raised p-1 shadow-lg"
         >
           {sources.length === 0 ? (
-            <p className="px-2.5 py-2 text-sm text-fg-muted">
-              넣을 수 있는 값이 없습니다. 이 노드 앞에 값을 내보내는 노드를 연결하세요.
-            </p>
+            <p className="px-2.5 py-2 text-sm text-fg-muted">{t('넣을 수 있는 값이 없습니다. 이 노드 앞에 값을 내보내는 노드를 연결하세요.')}</p>
           ) : (
             sources.map((s) => (
               <div key={s.node.id} role="group" aria-label={`#${nodeNumber(s.node.id)} ${s.def.label}`}>
@@ -234,7 +233,7 @@ function RefMenu({ nodeId, accepts, onPick }: { nodeId: string; accepts?: ValueT
                     className="flex w-full items-center justify-between gap-2 rounded-md px-2.5 py-1.5 text-left text-sm text-fg outline-none hover:bg-hover focus-visible:bg-hover"
                   >
                     <span className="truncate">{o.label}</span>
-                    <span className="shrink-0 text-xs text-fg-subtle">{TYPE_LABEL[o.type]}</span>
+                    <span className="shrink-0 text-xs text-fg-subtle">{t(TYPE_LABEL[o.type])}</span>
                   </button>
                 ))}
               </div>
@@ -350,11 +349,11 @@ function ListControl({ field, items, onChange, id }: { field: ListField; items: 
             }}
             className={inputCls()}
           />
-          <RemoveButton label={`${field.label} ${i + 1} 삭제`} onClick={() => onChange(items.filter((_, j) => j !== i))} />
+          <RemoveButton label={t('{0} {1} 삭제', [field.label, i + 1])} onClick={() => onChange(items.filter((_, j) => j !== i))} />
         </div>
       ))}
       {items.length < field.maxItems && (
-        <AddButton id={items.length === 0 ? id : undefined} onClick={add}>항목 추가</AddButton>
+        <AddButton id={items.length === 0 ? id : undefined} onClick={add}>{t('항목 추가')}</AddButton>
       )}
     </div>
   );
@@ -375,7 +374,7 @@ function TableControl({ field, rows: data, onChange, id }: { field: TableField; 
           <legend className="sr-only">{`${field.label} ${i + 1}`}</legend>
           <div className="mb-2 flex items-center justify-between">
             <span className="text-xs text-fg-subtle">{i + 1}</span>
-            <RemoveButton label={`${field.label} ${i + 1} 삭제`} onClick={() => onChange(data.filter((_, j) => j !== i))} />
+            <RemoveButton label={t('{0} {1} 삭제', [field.label, i + 1])} onClick={() => onChange(data.filter((_, j) => j !== i))} />
           </div>
           <div className="grid grid-cols-2 gap-2">
             {field.columns.map((c) => {

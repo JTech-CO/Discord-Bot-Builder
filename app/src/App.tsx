@@ -10,6 +10,8 @@ import { BottomPanel } from './editor/BottomPanel';
 import { TopBar } from './editor/TopBar';
 import { useUI } from './store/ui';
 import { IconButton, cx } from './ui/controls';
+import { t, useLang } from './i18n/t';
+import { desktop } from './platform';
 
 function useThemeAttribute() {
   const theme = useUI((s) => s.theme);
@@ -25,8 +27,8 @@ function NoticeBar() {
   const dismiss = useUI((s) => s.dismissNotice);
   useEffect(() => {
     if (!notice || notice.level === 'error') return;
-    const t = setTimeout(dismiss, 5000);
-    return () => clearTimeout(t);
+    const timer = setTimeout(dismiss, 5000);
+    return () => clearTimeout(timer);
   }, [notice, dismiss]);
 
   return (
@@ -40,15 +42,25 @@ function NoticeBar() {
           )}
         >
           <span className="py-1.5">{notice.text}</span>
-          <IconButton icon={X} label="알림 닫기" onClick={dismiss} />
+          <IconButton icon={X} label={t('알림 닫기')} onClick={dismiss} />
         </div>
       )}
     </div>
   );
 }
 
+/** Re-renders the app in the chosen language and tells the desktop main process, which writes some messages too. */
+function useLanguage() {
+  const lang = useLang((s) => s.lang);
+  useEffect(() => {
+    document.documentElement.lang = lang;
+    void desktop?.ui.setLang(lang);
+  }, [lang]);
+}
+
 export default function App() {
   useThemeAttribute();
+  useLanguage();
   const leftOpen = useUI((s) => s.leftOpen);
   const rightOpen = useUI((s) => s.rightOpen);
   const bottomOpen = useUI((s) => s.bottomOpen);
@@ -70,7 +82,7 @@ export default function App() {
         >
           {leftOpen && <div className={cx(side, 'left-0')}><NodeLibrary /></div>}
           <main className="relative flex min-h-0 min-w-0 flex-col">
-            <h1 className="sr-only">봇 흐름 편집기</h1>
+            <h1 className="sr-only">{t('봇 흐름 편집기')}</h1>
             <div className="min-h-0 flex-1">
               <Canvas />
             </div>

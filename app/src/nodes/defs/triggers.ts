@@ -3,8 +3,9 @@ import type { CheckResult, NodeDef, OutputDef, SimInputDef, SimValue } from '../
 import { USER_INPUTS, asMember, inputText, inputUser, simChannel, simMessage, simRole, simUser } from '../sim';
 import {
   COMMAND_NAME, CUSTOM_ID, OUT_CHANNEL, OUT_MEMBER, OUT_MESSAGE, OUT_USER, SNOWFLAKE_OR_REF,
-  clip, is, list, num, rows, safeKey, str,
+  clip, duration, is, list, num, rows, safeKey, str,
 } from '../helpers';
+import { t } from '../../i18n/t';
 
 const OPTION_TYPES = [
   { value: 'text', label: '텍스트' },
@@ -52,21 +53,21 @@ export const slashCommand: NodeDef = {
       .filter((r) => typeof r.name === 'string' && r.name)
       .map((r): OutputDef => ({
         key: `opt_${r.name}`,
-        label: `옵션: ${r.name}`,
+        label: t('옵션: {0}', [r.name]),
         type: OPTION_VALUE_TYPE[(r.type as keyof typeof OPTION_VALUE_TYPE) ?? 'text'] ?? 'text',
       })),
   ],
-  summary: (p) => `/${str(p, 'name') || '명령어'}`,
+  summary: (p) => `/${str(p, 'name') || t('명령어')}`,
   check: (p, self, graph) => {
     const out: CheckResult[] = [];
     const name = str(p, 'name');
     if (name && graph.nodesOfType('trigger.slashCommand').some((n) => n.id !== self && str(n.props, 'name') === name)) {
-      out.push({ level: 'error', field: 'name', message: `/${name} 명령어가 이미 있습니다.` });
+      out.push({ level: 'error', field: 'name', message: t('/{0} 명령어가 이미 있습니다.', [name]) });
     }
     const opts = rows(p, 'options');
     const firstOptional = opts.findIndex((o) => o.required !== true);
     if (firstOptional >= 0 && opts.slice(firstOptional).some((o) => o.required === true)) {
-      out.push({ level: 'error', field: 'options', message: '필수 옵션은 선택 옵션보다 앞에 있어야 합니다.' });
+      out.push({ level: 'error', field: 'options', message: t('필수 옵션은 선택 옵션보다 앞에 있어야 합니다.') });
     }
     return out;
   },
@@ -76,7 +77,7 @@ export const slashCommand: NodeDef = {
       const numeric = o.type === 'integer' || o.type === 'number';
       return {
         key: `opt_${o.name}`,
-        label: `옵션 ${o.name}${o.required === true ? ' (필수)' : ''}`,
+        label: t('옵션 {0}{1}', [o.name, o.required === true ? t(' (필수)') : '']),
         kind: numeric ? 'number' : o.type === 'boolean' ? 'boolean' : 'text',
         default: numeric ? 1 : o.type === 'boolean' ? false : '',
       };
@@ -84,7 +85,7 @@ export const slashCommand: NodeDef = {
   ],
   simulateTrigger: (p, input) => {
     const u = inputUser(input);
-    const outputs: Record<string, SimValue> = { user: u, member: asMember(u), channel: simChannel('일반') };
+    const outputs: Record<string, SimValue> = { user: u, member: asMember(u), channel: simChannel(t('일반')) };
     const missing: string[] = [];
     for (const o of rows(p, 'options').filter((o) => o.name)) {
       const key = `opt_${o.name}`;
@@ -95,8 +96,8 @@ export const slashCommand: NodeDef = {
       outputs[key] = empty ? null
         : o.type === 'user' ? simUser(text) : o.type === 'channel' ? simChannel(text) : o.type === 'role' ? simRole(text) : raw;
     }
-    if (missing.length) return { matched: false, outputs, log: `필수 옵션(${missing.join(', ')})이 비어 있으면 디스코드가 명령어를 보내지 않습니다.` };
-    return { matched: true, outputs, log: `${u.name}님이 /${str(p, 'name')} 명령어를 입력했습니다.` };
+    if (missing.length) return { matched: false, outputs, log: t('필수 옵션({0})이 비어 있으면 디스코드가 명령어를 보내지 않습니다.', [missing.join(', ')]) };
+    return { matched: true, outputs, log: t('{0}님이 /{1} 명령어를 입력했습니다.', [u.name, str(p, 'name')]) };
   },
   draftHint: 'Each option adds an output opt_<option name> (for example opt_면).',
   spec: (p, f) => {
@@ -131,15 +132,15 @@ export const message: NodeDef = {
     { key: 'ignoreBots', label: '봇이 보낸 메시지는 무시', kind: 'boolean', default: true },
   ],
   outputs: () => [
-    { key: 'author', label: '보낸 사람', type: 'user' },
+    { key: 'author', label: t('보낸 사람'), type: 'user' },
     OUT_MEMBER, OUT_CHANNEL, OUT_MESSAGE,
-    { key: 'content', label: '메시지 내용', type: 'text' },
+    { key: 'content', label: t('메시지 내용'), type: 'text' },
   ],
-  summary: (p) => clip(list(p, 'keywords').join(', ') || '키워드 없음'),
+  summary: (p) => clip(list(p, 'keywords').join(', ') || t('키워드 없음')),
   simInputs: (p) => [
-    { key: 'user', label: '보낸 사람 이름', kind: 'text', default: '테스트유저' },
+    { key: 'user', label: t('보낸 사람 이름'), kind: 'text', default: t('테스트유저') },
     USER_INPUTS[1],
-    { key: 'content', label: '메시지 내용', kind: 'text', default: list(p, 'keywords')[0] ?? '안녕' },
+    { key: 'content', label: t('메시지 내용'), kind: 'text', default: list(p, 'keywords')[0] ?? t('안녕') },
   ],
   simulateTrigger: (p, input) => {
     const u = inputUser(input);
@@ -150,8 +151,8 @@ export const message: NodeDef = {
       .some((k) => (mode === 'exact' ? text === k : mode === 'startsWith' ? text.startsWith(k) : text.includes(k)));
     return {
       matched,
-      outputs: { author: u, member: asMember(u), channel: simChannel('일반'), message: simMessage(content), content },
-      log: matched ? `${u.name}님의 메시지 "${clip(content, 30)}"가 키워드에 맞습니다.` : `메시지 "${clip(content, 30)}"는 키워드에 맞지 않아 흐름이 시작되지 않습니다.`,
+      outputs: { author: u, member: asMember(u), channel: simChannel(t('일반')), message: simMessage(content), content },
+      log: matched ? t('{0}님의 메시지 "{1}"가 키워드에 맞습니다.', [u.name, clip(content, 30)]) : t('메시지 "{0}"는 키워드에 맞지 않아 흐름이 시작되지 않습니다.', [clip(content, 30)]),
     };
   },
   spec: (p, f) => {
@@ -176,16 +177,16 @@ export const button: NodeDef = {
     },
   ],
   outputs: () => [OUT_USER, OUT_MEMBER, OUT_CHANNEL, OUT_MESSAGE],
-  summary: (p) => str(p, 'customId') || 'ID 없음',
+  summary: (p) => str(p, 'customId') || t('ID 없음'),
   check: (p, self, graph) => {
     const id = str(p, 'customId');
     if (!id) return [];
     const out: CheckResult[] = [];
     const made = graph.nodesOfType('action.sendMessage')
       .some((n) => rows(n.props, 'buttons').some((b) => b.style !== 'link' && b.customId === id));
-    if (!made) out.push({ level: 'warning', field: 'customId', message: `ID가 "${id}"인 버튼을 보내는 노드가 없습니다.` });
+    if (!made) out.push({ level: 'warning', field: 'customId', message: t('ID가 "{0}"인 버튼을 보내는 노드가 없습니다.', [id]) });
     if (graph.nodesOfType('trigger.button').some((n) => n.id !== self && str(n.props, 'customId') === id)) {
-      out.push({ level: 'warning', field: 'customId', message: `같은 버튼 ID를 처리하는 트리거가 여러 개입니다.` });
+      out.push({ level: 'warning', field: 'customId', message: t('같은 버튼 ID를 처리하는 트리거가 여러 개입니다.') });
     }
     return out;
   },
@@ -194,8 +195,8 @@ export const button: NodeDef = {
     const u = inputUser(input);
     return {
       matched: true,
-      outputs: { user: u, member: asMember(u), channel: simChannel('일반'), message: simMessage('버튼이 달린 메시지') },
-      log: `${u.name}님이 "${str(p, 'customId')}" 버튼을 눌렀습니다.`,
+      outputs: { user: u, member: asMember(u), channel: simChannel(t('일반')), message: simMessage(t('버튼이 달린 메시지')) },
+      log: t('{0}님이 "{1}" 버튼을 눌렀습니다.', [u.name, str(p, 'customId')]),
     };
   },
   spec: (p, f) => `Starts when a user clicks a button whose custom ID is ${f.text(str(p, 'customId'))}. Output message is the message the button is attached to.`,
@@ -223,28 +224,28 @@ export const modalSubmit: NodeDef = {
       OUT_USER, OUT_MEMBER, OUT_CHANNEL,
       ...fields
         .filter((f) => typeof f.id === 'string' && f.id)
-        .map((f): OutputDef => ({ key: `field_${f.id}`, label: `입력: ${f.label || f.id}`, type: 'text' })),
+        .map((f): OutputDef => ({ key: `field_${f.id}`, label: t('입력: {0}', [f.label || f.id]), type: 'text' })),
     ];
   },
-  summary: (p) => str(p, 'customId') || 'ID 없음',
+  summary: (p) => str(p, 'customId') || t('ID 없음'),
   check: (p, _self, graph) => {
     const id = str(p, 'customId');
     if (!id || graph.nodesOfType('action.showModal').some((n) => str(n.props, 'customId') === id)) return [];
-    return [{ level: 'warning', field: 'customId', message: `ID가 "${id}"인 모달을 띄우는 노드가 없습니다.` }];
+    return [{ level: 'warning', field: 'customId', message: t('ID가 "{0}"인 모달을 띄우는 노드가 없습니다.', [id]) }];
   },
   simInputs: (p, graph) => {
     const modal = graph.nodesOfType('action.showModal').find((n) => str(n.props, 'customId') === str(p, 'customId'));
     const fields = modal ? rows(modal.props, 'fields').filter((f) => f.id) : [];
     return [
       ...USER_INPUTS,
-      ...fields.map((f): SimInputDef => ({ key: `field_${f.id}`, label: `입력 ${f.label || f.id}`, kind: 'text', default: '' })),
+      ...fields.map((f): SimInputDef => ({ key: `field_${f.id}`, label: t('입력 {0}', [f.label || f.id]), kind: 'text', default: '' })),
     ];
   },
   simulateTrigger: (p, input) => {
     const u = inputUser(input);
-    const outputs: Record<string, SimValue> = { user: u, member: asMember(u), channel: simChannel('일반') };
+    const outputs: Record<string, SimValue> = { user: u, member: asMember(u), channel: simChannel(t('일반')) };
     for (const [key, value] of Object.entries(input)) if (key.startsWith('field_')) outputs[key] = String(value);
-    return { matched: true, outputs, log: `${u.name}님이 "${str(p, 'customId')}" 모달을 제출했습니다.` };
+    return { matched: true, outputs, log: t('{0}님이 "{1}" 모달을 제출했습니다.', [u.name, str(p, 'customId')]) };
   },
   draftHint: 'Outputs field_<input id> for every input of the action.showModal node with the same customId.',
   spec: (p, f) =>
@@ -269,11 +270,11 @@ export const member: NodeDef = {
     },
   ],
   outputs: () => [OUT_USER, OUT_MEMBER],
-  summary: (p) => (str(p, 'event') === 'leave' ? '퇴장' : '입장'),
+  summary: (p) => (str(p, 'event') === 'leave' ? t('퇴장') : t('입장')),
   simInputs: () => [USER_INPUTS[0]],
   simulateTrigger: (p, input) => {
     const u = inputUser(input);
-    return { matched: true, outputs: { user: u, member: asMember(u) }, log: `${u.name}님이 서버에 ${str(p, 'event') === 'leave' ? '나갔' : '들어왔'}습니다.` };
+    return { matched: true, outputs: { user: u, member: asMember(u) }, log: t('{0}님이 서버에 {1}습니다.', [u.name, str(p, 'event') === 'leave' ? t('나갔') : t('들어왔')]) };
   },
   spec: (p) =>
     str(p, 'event') === 'leave'
@@ -303,14 +304,14 @@ export const voice: NodeDef = {
       help: '비워 두면 모든 음성 채널에 반응합니다.',
     },
   ],
-  outputs: () => [OUT_USER, OUT_MEMBER, { key: 'channel', label: '음성 채널', type: 'channel' }],
-  summary: (p) => ({ join: '입장', leave: '퇴장', move: '이동' })[str(p, 'event')] ?? '입장',
-  simInputs: () => [USER_INPUTS[0], { key: 'channel', label: '음성 채널 이름', kind: 'text', default: '일반 음성' }],
+  outputs: () => [OUT_USER, OUT_MEMBER, { key: 'channel', label: t('음성 채널'), type: 'channel' }],
+  summary: (p) => ({ join: t('입장'), leave: t('퇴장'), move: t('이동') })[str(p, 'event')] ?? t('입장'),
+  simInputs: () => [USER_INPUTS[0], { key: 'channel', label: t('음성 채널 이름'), kind: 'text', default: t('일반 음성') }],
   simulateTrigger: (p, input) => {
     const u = inputUser(input);
     const ch = simChannel(inputText(input, 'channel'));
-    const what = { join: '에 들어왔', leave: '에서 나갔', move: '(으)로 옮겼' }[str(p, 'event') || 'join'];
-    return { matched: true, outputs: { user: u, member: asMember(u), channel: ch }, log: `${u.name}님이 #${ch.name}${what}습니다.` };
+    const what = { join: t('에 들어왔'), leave: t('에서 나갔'), move: t('(으)로 옮겼') }[str(p, 'event') || 'join'];
+    return { matched: true, outputs: { user: u, member: asMember(u), channel: ch }, log: t('{0}님이 #{1}{2}습니다.', [u.name, ch.name, what]) };
   },
   spec: (p, f) => {
     const what = {
@@ -337,18 +338,18 @@ export const reaction: NodeDef = {
   ],
   outputs: () => [
     OUT_USER, OUT_MEMBER, OUT_CHANNEL, OUT_MESSAGE,
-    { key: 'emoji', label: '이모지', type: 'text' },
+    { key: 'emoji', label: t('이모지'), type: 'text' },
   ],
-  summary: (p) => str(p, 'emoji') || '모든 이모지',
-  simInputs: (p) => [USER_INPUTS[0], { key: 'emoji', label: '반응 이모지', kind: 'text', default: str(p, 'emoji') || '👍' }],
+  summary: (p) => str(p, 'emoji') || t('모든 이모지'),
+  simInputs: (p) => [USER_INPUTS[0], { key: 'emoji', label: t('반응 이모지'), kind: 'text', default: str(p, 'emoji') || '👍' }],
   simulateTrigger: (p, input) => {
     const u = inputUser(input);
     const emoji = inputText(input, 'emoji');
     const matched = !str(p, 'emoji') || emoji === str(p, 'emoji');
     return {
       matched,
-      outputs: { user: u, member: asMember(u), channel: simChannel('일반'), message: simMessage('반응이 달린 메시지'), emoji },
-      log: matched ? `${u.name}님이 ${emoji} 반응을 달았습니다.` : `${emoji} 반응은 조건(${str(p, 'emoji')})과 달라 흐름이 시작되지 않습니다.`,
+      outputs: { user: u, member: asMember(u), channel: simChannel(t('일반')), message: simMessage(t('반응이 달린 메시지')), emoji },
+      log: matched ? t('{0}님이 {1} 반응을 달았습니다.', [u.name, emoji]) : t('{0} 반응은 조건({1})과 달라 흐름이 시작되지 않습니다.', [emoji, str(p, 'emoji')]),
     };
   },
   spec: (p, f) => {
@@ -398,13 +399,13 @@ export const schedule: NodeDef = {
   outputs: () => [],
   summary: (p) =>
     str(p, 'mode') === 'daily'
-      ? `매일 ${str(p, 'time') || '--:--'}`
-      : `${num(p, 'every') ?? '?'}${str(p, 'unit') === 'hours' ? '시간' : '분'}마다`,
+      ? t('매일 {0}', [str(p, 'time') || '--:--'])
+      : t('{0}마다', [duration(num(p, 'every') ?? '?', str(p, 'unit') === 'hours' ? 'hours' : 'minutes')]),
   simInputs: () => [],
   simulateTrigger: (p) => ({
     matched: true,
     outputs: {},
-    log: str(p, 'mode') === 'daily' ? `매일 ${str(p, 'time') || '--:--'}이 되었습니다.` : '예약한 간격이 지났습니다.',
+    log: str(p, 'mode') === 'daily' ? t('매일 {0}이 되었습니다.', [str(p, 'time') || '--:--']) : t('예약한 간격이 지났습니다.'),
   }),
   spec: (p, f) =>
     str(p, 'mode') === 'daily'
@@ -423,7 +424,7 @@ export const ready: NodeDef = {
   fields: [],
   outputs: () => [],
   simInputs: () => [],
-  simulateTrigger: () => ({ matched: true, outputs: {}, log: '봇이 켜졌습니다.' }),
+  simulateTrigger: () => ({ matched: true, outputs: {}, log: t('봇이 켜졌습니다.') }),
   spec: () => 'Starts once each time the bot has logged in and is ready. There is no user or channel context.',
   requires: () => ({ intents: ['Guilds'] }),
 };

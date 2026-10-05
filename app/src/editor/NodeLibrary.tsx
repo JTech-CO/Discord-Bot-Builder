@@ -1,12 +1,14 @@
 import { useReactFlow } from '@xyflow/react';
 import { Search, Wand } from 'lucide-react';
 import { useState } from 'react';
-import { CATEGORIES, categoryColor, defsByCategory } from '../nodes/registry';
+import { CATEGORIES, categoryColor, defsByCategory, localize } from '../nodes/registry';
 import type { NodeDef } from '../nodes/types';
 import { useProject } from '../store/project';
 import { useUI } from '../store/ui';
 import { NODE_DRAG_MIME, NODE_WIDTH } from './Canvas';
 import { openDraft } from './DraftDialog';
+import { t } from '../i18n/t';
+import { tx } from '../i18n/tx';
 
 const matches = (d: NodeDef, q: string) =>
   !q || d.label.toLowerCase().includes(q) || d.description.toLowerCase().includes(q) || d.type.toLowerCase().includes(q);
@@ -27,34 +29,32 @@ export function NodeLibrary() {
     if (!window.matchMedia('(min-width: 1024px)').matches) useUI.getState().togglePanel('left');
   };
 
-  const sections = CATEGORIES.map((c) => ({ ...c, defs: defsByCategory(c.id).filter((d) => matches(d, q)) })).filter(
+  const sections = CATEGORIES.map((c) => ({ ...c, label: t(c.label), defs: defsByCategory(c.id).map(localize).filter((d) => matches(d, q)) })).filter(
     (s) => s.defs.length > 0,
   );
 
   return (
-    <aside aria-label="노드 목록" className="flex h-full min-h-0 flex-col border-r border-line bg-panel">
+    <aside aria-label={t('노드 목록')} className="flex h-full min-h-0 flex-col border-r border-line bg-panel">
       <div className="space-y-2 p-3">
         <button
           type="button"
           onClick={openDraft}
           className="flex h-8 w-full items-center justify-center gap-1.5 rounded-md border border-line text-sm text-fg hover:border-line-strong hover:bg-hover"
-        >
-          <Wand size={15} strokeWidth={1.75} aria-hidden /> 설명으로 초안 만들기
-        </button>
+        >{tx('{0} 설명으로 초안 만들기', [<Wand size={15} strokeWidth={1.75} aria-hidden />])}</button>
         <label className="relative block">
-          <span className="sr-only">노드 검색</span>
+          <span className="sr-only">{t('노드 검색')}</span>
           <Search size={15} strokeWidth={1.75} className="pointer-events-none absolute top-1/2 left-2.5 -translate-y-1/2 text-fg-subtle" aria-hidden />
           <input
             type="search"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="노드 검색"
+            placeholder={t('노드 검색')}
             className="h-8 w-full rounded-md border border-line bg-field pr-2 pl-8 text-sm text-fg placeholder:text-fg-subtle focus:border-accent focus:outline-none"
           />
         </label>
       </div>
 
-      <div className="min-h-0 flex-1 overflow-y-auto px-2 pb-4">
+      <div className="scroll-hidden min-h-0 flex-1 overflow-y-auto px-2 pb-4">
         {sections.map((s) => (
           <section key={s.id} aria-labelledby={`lib-${s.id}`}>
             <h3 id={`lib-${s.id}`} className="flex items-center gap-2 px-2 pt-3 pb-1 text-xs font-semibold text-fg-subtle">
@@ -86,7 +86,7 @@ export function NodeLibrary() {
             </ul>
           </section>
         ))}
-        {sections.length === 0 && <p className="px-2 pt-3 text-sm text-fg-muted">"{query}"와(과) 맞는 노드가 없습니다.</p>}
+        {sections.length === 0 && <p className="px-2 pt-3 text-sm text-fg-muted">{t('"{0}"와(과) 맞는 노드가 없습니다.', [query])}</p>}
       </div>
     </aside>
   );

@@ -1,3 +1,4 @@
+import { t } from '../i18n/t';
 import type { OutputDef, Props, TableRow } from './types';
 
 export const str = (p: Props, key: string): string => (typeof p[key] === 'string' ? (p[key] as string) : '');
@@ -51,6 +52,10 @@ export const OUT_CHANNEL: OutputDef = { key: 'channel', label: '채널', type: '
 export const OUT_MESSAGE: OutputDef = { key: 'message', label: '메시지', type: 'message' };
 
 /** Identifier-like text that may appear unquoted in a prompt; anything else becomes "?". */
+/** A number with its time unit ("5분", "5 min"), so the two are translated together. */
+export const duration = (n: number | string, unit: string) =>
+  ({ seconds: t('{0}초', [n]), minutes: t('{0}분', [n]), hours: t('{0}시간', [n]), days: t('{0}일', [n]) })[unit] ?? t('{0}초', [n]);
+
 export const safeKey = (v: unknown): string => {
   const s = typeof v === 'string' ? v : '';
   return /^[\p{L}\p{N}_-]{1,64}$/u.test(s) ? s : '?';

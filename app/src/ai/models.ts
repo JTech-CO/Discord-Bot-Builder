@@ -1,3 +1,4 @@
+import { t } from '../i18n/t';
 // Prices in USD per million tokens (Anthropic first-party rates). Used for estimates only.
 export const MODELS = [
   { id: 'claude-opus-5-5', label: 'Claude Opus 5.5', hint: '기본 · 가장 정확', input: 4, output: 20 },
@@ -18,4 +19,4 @@ export function costUSD(model: string, inputTokens: number, outputTokens: number
   return (inputTokens * m.input + outputTokens * m.output) / 1_000_000;
 }
 
-export const formatUSD = (usd: number) => (usd < 0.01 ? '$0.01 미만' : `$${usd.toFixed(2)}`);
+export const formatUSD = (usd: number) => (usd < 0.01 ? t('$0.01 미만') : `$${usd.toFixed(2)}`);

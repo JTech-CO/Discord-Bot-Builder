@@ -1,6 +1,7 @@
 import { app, safeStorage } from 'electron';
 import { mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
+import { t } from '../src/i18n/t';
 
 /**
  * Desktop state in the app's data folder. Secret values (API key, bot tokens) are encrypted
@@ -40,7 +41,7 @@ function save() {
 }
 
 function encrypt(plain: string): string {
-  if (!safeStorage.isEncryptionAvailable()) throw new Error('이 PC에서는 암호화 저장소를 쓸 수 없어 비밀값을 저장하지 않았습니다.');
+  if (!safeStorage.isEncryptionAvailable()) throw new Error(t('이 PC에서는 암호화 저장소를 쓸 수 없어 비밀값을 저장하지 않았습니다.'));
   return safeStorage.encryptString(plain).toString('base64');
 }
 

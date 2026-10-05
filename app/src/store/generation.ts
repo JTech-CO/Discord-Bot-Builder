@@ -5,10 +5,11 @@ import type { GenerationErrorKind, GenerationProgress, GenerationResult } from '
 import { useApiKey } from '../ai/key';
 import { DEFAULT_MODEL, MODELS, type ModelId } from '../ai/models';
 import { checkOutput, isSafePath } from '../ai/output';
-import { compilePrompt, flowKey } from '../compiler/compile';
+import { compilePrompt, flowKey, type BotRequirements } from '../compiler/compile';
 import { desktop } from '../platform';
 import { useIssues } from './issues';
 import { useProject } from './project';
+import { t } from '../i18n/t';
 
 const RECORD_KEY = 'dbb:last-generation';
 const MODEL_KEY = 'dbb:generation-model';
@@ -48,12 +49,12 @@ interface GenerationState {
 }
 
 /** The current flow's API prompt and its key, recompiled only when props, edges or settings change. */
-export function useFlowPrompt(): { text: string; key: string } {
+export function useFlowPrompt(): { text: string; key: string; requirements: BotRequirements } {
   const rev = useIssues((s) => s.rev);
   return useMemo(() => {
     const { meta, nodes, edges } = useProject.getState();
-    const text = compilePrompt(meta, nodes, edges, 'api').text;
-    return { text, key: flowKey(text) };
+    const { text, requirements } = compilePrompt(meta, nodes, edges, 'api');
+    return { text, key: flowKey(text), requirements };
   }, [rev]);
 }
 
@@ -126,17 +127,17 @@ export const useGeneration = create<GenerationState>((set, get) => ({
     if (get().status === 'running') return;
     const apiKey = useApiKey.getState().key;
     if (desktop ? !useApiKey.getState().label : !apiKey) {
-      set({ error: { kind: 'no_key', message: 'Anthropic API 키를 먼저 입력해 주세요.' } });
+      set({ error: { kind: 'no_key', message: t('Anthropic API 키를 먼저 입력해 주세요.') } });
       return;
     }
     if (useIssues.getState().errors > 0) {
-      set({ error: { kind: 'invalid_flow', message: '흐름에 오류가 있습니다. 문제 탭에서 고친 뒤 생성해 주세요.' } });
+      set({ error: { kind: 'invalid_flow', message: t('흐름에 오류가 있습니다. 문제 탭에서 고친 뒤 생성해 주세요.') } });
       return;
     }
     const { meta, nodes, edges } = useProject.getState();
     const compiled = compilePrompt(meta, nodes, edges, 'api');
     if (compiled.flowCount === 0) {
-      set({ error: { kind: 'invalid_flow', message: '트리거가 없어 만들 흐름이 없습니다.' } });
+      set({ error: { kind: 'invalid_flow', message: t('트리거가 없어 만들 흐름이 없습니다.') } });
       return;
     }
 

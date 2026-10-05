@@ -4,6 +4,7 @@ import { isSingleRef, parseRefs, replaceRefs } from '../flow/refs';
 import { toText } from '../nodes/sim';
 import { getDef, portsOf } from '../nodes/registry';
 import type { Props, SimContext, SimEffect, SimEntity, SimInputs, SimValue } from '../nodes/types';
+import { t } from '../i18n/t';
 
 export interface SimStep {
   nodeId: string;
@@ -59,7 +60,7 @@ export function runSimulation(
   const trigger = idx.byId.get(triggerId);
   const tdef = trigger && getDef(trigger.data.type);
   if (!trigger || !tdef?.simulateTrigger) {
-    return { triggerId, status: 'error', steps: [{ nodeId: triggerId, type: '', log: '', port: null, outputs: {}, error: '시작할 트리거를 찾지 못했습니다.' }], edges: [] };
+    return { triggerId, status: 'error', steps: [{ nodeId: triggerId, type: '', log: '', port: null, outputs: {}, error: t('시작할 트리거를 찾지 못했습니다.') }], edges: [] };
   }
 
   const started = tdef.simulateTrigger(trigger.data.props, input, idx.view);
@@ -72,10 +73,10 @@ export function runSimulation(
 
   const render = (text: string) =>
     replaceRefs(text, (ref) => {
-      if (ref.kind === 'env') return `(환경변수 ${ref.name})`;
+      if (ref.kind === 'env') return t('(환경변수 {0})', [ref.name]);
       if (ref.kind === 'invalid') return ref.raw;
       const v = outputs.get(ref.nodeId)?.[ref.key];
-      return v === undefined ? `(값 없음: #${nodeNumber(ref.nodeId)}.${ref.key})` : toText(v);
+      return v === undefined ? t('(값 없음: #{0}.{1})', [nodeNumber(ref.nodeId), ref.key]) : toText(v);
     });
 
   const makeContext = (node: BotNode): SimContext => {
@@ -116,7 +117,7 @@ export function runSimulation(
 
     const def = getDef(node.data.type);
     if (!def?.simulate) {
-      steps.push({ nodeId: node.id, type: node.data.type, log: '', port: null, outputs: {}, error: '시뮬레이터가 이 노드를 지원하지 않습니다.' });
+      steps.push({ nodeId: node.id, type: node.data.type, log: '', port: null, outputs: {}, error: t('시뮬레이터가 이 노드를 지원하지 않습니다.') });
       return { triggerId, status: 'error', steps, edges: travelled };
     }
     let result;

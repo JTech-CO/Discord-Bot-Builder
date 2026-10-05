@@ -34,6 +34,16 @@
   --cat-data: #45a9dc;
   --cat-integration: #e0705f;
   --cat-custom: #b58af0;
+
+  /* Syntax colors for generated code */
+  --syn-keyword: #f47067;
+  --syn-string: #96d0ff;
+  --syn-number: #f69d50;
+  --syn-comment: #8b949e;
+  --syn-function: #dcbdfb;
+  --syn-type: #8ddb8c;
+  --syn-variable: #6cb6ff;
+  --syn-property: #6cb6ff;
 }
 
 @media (prefers-color-scheme: light) {
@@ -66,6 +76,15 @@
     --cat-data: #1f7fb0;
     --cat-integration: #c0493a;
     --cat-custom: #8a55cf;
+
+    --syn-keyword: #cf222e;
+    --syn-string: #0a3069;
+    --syn-number: #953800;
+    --syn-comment: #6e7781;
+    --syn-function: #8250df;
+    --syn-type: #116329;
+    --syn-variable: #0550ae;
+    --syn-property: #0550ae;
   }
 }
 
@@ -98,6 +117,15 @@
   --cat-data: #1f7fb0;
   --cat-integration: #c0493a;
   --cat-custom: #8a55cf;
+
+  --syn-keyword: #cf222e;
+  --syn-string: #0a3069;
+  --syn-number: #953800;
+  --syn-comment: #6e7781;
+  --syn-function: #8250df;
+  --syn-type: #116329;
+  --syn-variable: #0550ae;
+  --syn-property: #0550ae;
 }
 
 @theme inline {
@@ -150,6 +178,21 @@ body {
   outline-offset: 1px;
 }
 
+/* Panels that still scroll with the wheel, trackpad and keyboard but draw no scrollbar. */
+@utility scroll-hidden {
+  scrollbar-width: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+/* Same for the vertical bar only, where long lines still need the horizontal one (Chromium and Safari). */
+@utility scroll-hidden-y {
+  &::-webkit-scrollbar {
+    width: 0;
+  }
+}
+
 ::selection {
   background: var(--accent-soft);
 }
@@ -162,6 +205,16 @@ body {
     animation-duration: 0ms !important;
   }
 }
+
+/* ── Generated code ───────────────────────────────── */
+.tok-keyword { color: var(--syn-keyword); }
+.tok-string { color: var(--syn-string); }
+.tok-number { color: var(--syn-number); }
+.tok-comment { color: var(--syn-comment); font-style: italic; }
+.tok-function { color: var(--syn-function); }
+.tok-type { color: var(--syn-type); }
+.tok-variable { color: var(--syn-variable); }
+.tok-property { color: var(--syn-property); }
 
 /* ── React Flow ───────────────────────────────────── */
 .react-flow {

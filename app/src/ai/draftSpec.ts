@@ -4,6 +4,7 @@ import { indexGraph } from '../flow/graph';
 import type { BotEdge, BotNode } from '../flow/model';
 import { CATEGORIES, NODE_DEFS, defaultProps, defsByCategory, portsOf } from '../nodes/registry';
 import type { FieldDef, GraphView, NodeDef } from '../nodes/types';
+import { t } from '../i18n/t';
 
 /**
  * What the drafting model returns. Structured outputs need every object's keys declared up
@@ -135,21 +136,21 @@ export function draftToProject(raw: DraftOutput, startSeq: number): { ok: true; 
   const seen = new Set<string>();
   const kept = raw.nodes.filter((n) => {
     if (!NODE_DEFS.has(n.type)) {
-      dropped.push(`알 수 없는 노드 종류 "${n.type}"`);
+      dropped.push(t('알 수 없는 노드 종류 "{0}"', [n.type]));
       return false;
     }
     if (seen.has(n.id)) {
-      dropped.push(`중복된 노드 ID "${n.id}"`);
+      dropped.push(t('중복된 노드 ID "{0}"', [n.id]));
       return false;
     }
     seen.add(n.id);
     return true;
   });
   if (kept.length > MAX_NODES) {
-    dropped.push(`노드가 너무 많아 앞의 ${MAX_NODES}개만 남겼습니다`);
+    dropped.push(t('노드가 너무 많아 앞의 {0}개만 남겼습니다', [MAX_NODES]));
     kept.length = MAX_NODES;
   }
-  if (kept.length === 0) return { ok: false, error: '쓸 수 있는 노드가 없는 초안이 왔습니다. 설명을 조금 더 구체적으로 적어 다시 시도해 주세요.' };
+  if (kept.length === 0) return { ok: false, error: t('쓸 수 있는 노드가 없는 초안이 왔습니다. 설명을 조금 더 구체적으로 적어 다시 시도해 주세요.') };
 
   const ids = new Map(kept.map((n, i) => [n.id, `n${startSeq + i}`]));
   const pattern = new RegExp(`\\{\\{(\\s*)(${[...ids.keys()].map(escapeRe).join('|')})\\.`, 'g');
@@ -166,7 +167,7 @@ export function draftToProject(raw: DraftOutput, startSeq: number): { ok: true; 
       v = remapDeep(v, ids, pattern);
       if (typeof v === 'string' && v.length > 20_000) v = v.slice(0, 20_000);
       if (acceptable(v)) props[key] = v;
-      else dropped.push(`${n.id}의 "${key}" 값`);
+      else dropped.push(t('{0}의 "{1}" 값', [n.id, key]));
     }
     return { id: ids.get(n.id)!, type: n.type, position: { x: 0, y: 0 }, props: props as ProjectFile['nodes'][number]['props'] };
   });
@@ -174,12 +175,12 @@ export function draftToProject(raw: DraftOutput, startSeq: number): { ok: true; 
   const edges: ProjectFile['edges'] = raw.edges
     .filter((e) => ids.has(e.from) && ids.has(e.to))
     .map((e) => ({ source: ids.get(e.from)!, sourcePort: e.port.slice(0, 64), target: ids.get(e.to)! }));
-  if (edges.length < raw.edges.length) dropped.push(`없는 노드를 잇는 연결 ${raw.edges.length - edges.length}개`);
+  if (edges.length < raw.edges.length) dropped.push(t('없는 노드를 잇는 연결 {0}개', [raw.edges.length - edges.length]));
 
   const loaded = fromFile({
     format: 'discord-bot-builder',
     version: 2,
-    meta: { name: raw.name.slice(0, 100) || '새 봇', description: raw.description.slice(0, 2000), commandScope: 'guild', locale: 'ko' },
+    meta: { name: raw.name.slice(0, 100) || t('새 봇'), description: raw.description.slice(0, 2000), commandScope: 'guild', locale: 'ko' },
     nodes,
     edges,
   });

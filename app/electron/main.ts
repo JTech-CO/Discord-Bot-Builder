@@ -15,6 +15,7 @@ import { inspectFolder, writeProject } from './files';
 import { BotRunner } from './runner';
 import { runSmoke } from './smoke';
 import { store } from './store';
+import { t, useLang } from '../src/i18n/t';
 
 const DIST = join(__dirname, '..', 'dist');
 const devUrl = (() => {
@@ -22,6 +23,8 @@ const devUrl = (() => {
   return arg && /^http:\/\/localhost:\d{2,5}$/.test(arg) ? arg : null;
 })();
 const smoke = process.argv.includes('--smoke');
+// The self-check writes sample data to storage and the key store, so it gets its own profile instead of the user's.
+if (smoke) app.setPath('userData', join(app.getPath('temp'), 'discord-bot-builder-smoke'));
 
 // Links the app may open in the user's browser. Everything else is blocked.
 const EXTERNAL_HOSTS = new Set(['console.anthropic.com', 'platform.claude.com', 'nodejs.org', 'discord.com']);
@@ -38,13 +41,13 @@ const runner = new BotRunner((s) => send('bot:state', s), (l) => send('bot:log',
 
 function handle<S extends z.ZodType>(channel: string, schema: S, fn: (arg: z.infer<S>) => unknown) {
   ipcMain.handle(channel, (event: IpcMainInvokeEvent, raw: unknown) => {
-    if (!isAppUrl(event.senderFrame?.url ?? '')) throw new Error('허용되지 않은 호출입니다.');
+    if (!isAppUrl(event.senderFrame?.url ?? '')) throw new Error(t('허용되지 않은 호출입니다.'));
     return fn(schema.parse(raw));
   });
 }
 
 const None = z.undefined();
-const Dir = z.string().min(1).max(1024).refine((d) => store.isApproved(d), '앱에서 고른 폴더가 아닙니다.');
+const Dir = z.string().min(1).max(1024).refine((d) => store.isApproved(d), { error: () => t('앱에서 고른 폴더가 아닙니다.') });
 const EnvName = z.string().regex(ENV_NAME.regex);
 
 handle('ai:keyLabel', None, () => {
@@ -55,6 +58,7 @@ handle('ai:setKey', z.string().regex(KEY_PATTERN), (key) => {
   store.setApiKey(key);
   return maskKey(key);
 });
+handle('ui:setLang', z.enum(['ko', 'en']), (lang) => useLang.getState().setLang(lang));
 handle('ai:clearKey', None, () => store.clearApiKey());
 
 let generation: AbortController | null = null;
@@ -63,7 +67,7 @@ handle(
   z.object({ model: z.enum(MODELS.map((m) => m.id) as [string, ...string[]]), prompt: z.string().min(1).max(400_000) }),
   async ({ model, prompt }): Promise<DesktopGenerateResult> => {
     const apiKey = store.apiKey();
-    if (!apiKey) return { ok: false, kind: 'auth', message: 'Anthropic API 키를 먼저 입력해 주세요.' };
+    if (!apiKey) return { ok: false, kind: 'auth', message: t('Anthropic API 키를 먼저 입력해 주세요.') };
     generation?.abort();
     const controller = new AbortController();
     generation = controller;
@@ -91,7 +95,7 @@ handle(
   }),
   async ({ model, description, locale }): Promise<DesktopDraftResult> => {
     const apiKey = store.apiKey();
-    if (!apiKey) return { ok: false, kind: 'auth', message: 'Anthropic API 키를 먼저 입력해 주세요.' };
+    if (!apiKey) return { ok: false, kind: 'auth', message: t('Anthropic API 키를 먼저 입력해 주세요.') };
     drafting?.abort();
     const controller = new AbortController();
     drafting = controller;
@@ -117,7 +121,7 @@ handle('project:chooseFolder', z.string().max(100), async (name) => {
   const parent = join(app.getPath('documents'), 'Discord Bot Builder');
   mkdirSync(parent, { recursive: true });
   const picked = await dialog.showOpenDialog(win!, {
-    title: '봇 프로젝트를 저장할 폴더',
+    title: t('봇 프로젝트를 저장할 폴더'),
     defaultPath: join(parent, projectSlug(name)),
     properties: ['openDirectory', 'createDirectory', 'promptToCreate'],
   });
@@ -197,7 +201,8 @@ else {
     win?.focus();
   });
   app.whenReady().then(() => {
-    session.defaultSession.setPermissionRequestHandler((_wc, _perm, cb) => cb(false));
+    // Only writing to the clipboard (the copy buttons) is allowed; reading it and everything else is denied.
+    session.defaultSession.setPermissionRequestHandler((_wc, perm, cb) => cb(perm === 'clipboard-sanitized-write'));
     if (!devUrl) Menu.setApplicationMenu(null);
     createWindow();
   });

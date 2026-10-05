@@ -75,8 +75,8 @@ export function usePopover() {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         setOpen(false);
-        const t = root.current?.querySelector<HTMLElement>('[data-popover-trigger]');
-        (t?.matches('button') ? t : t?.querySelector<HTMLElement>('button'))?.focus();
+        const opener = root.current?.querySelector<HTMLElement>('[data-popover-trigger]');
+        (opener?.matches('button') ? opener : opener?.querySelector<HTMLElement>('button'))?.focus();
       }
     };
     document.addEventListener('pointerdown', onDown);

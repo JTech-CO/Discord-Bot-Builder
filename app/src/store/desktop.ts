@@ -3,6 +3,7 @@ import { desktop } from '../platform';
 import type { BotLogLine, BotState, NodeInfo } from '../platform/api';
 import { useGeneration } from './generation';
 import { useUI } from './ui';
+import { t } from '../i18n/t';
 
 const DIR_KEY = 'dbb:bot-dir';
 const MAX_LOG_LINES = 2000;
@@ -91,11 +92,11 @@ export const useDesktop = create<DesktopState>((set, get) => ({
       const dir = await desktop.project.chooseFolder(result.projectName);
       if (!dir) return;
       const { entries } = await desktop.project.inspect(dir);
-      if (entries > 0 && !window.confirm(`이 폴더에 이미 항목이 ${entries}개 있습니다. 같은 이름의 파일은 덮어씁니다. 계속할까요?\n\n${dir}`)) return;
+      if (entries > 0 && !window.confirm(t('이 폴더에 이미 항목이 {0}개 있습니다. 같은 이름의 파일은 덮어씁니다. 계속할까요?\n\n{1}', [entries, dir]))) return;
       const { written } = await desktop.project.write(dir, result.files);
       writeDir(dir, result.projectName);
       set({ dir, dirProject: result.projectName, envSet: await desktop.env.names(dir) });
-      useUI.getState().notify(`파일 ${written}개를 저장했습니다.`);
+      useUI.getState().notify(t('파일 {0}개를 저장했습니다.', [written]));
     } catch (err) {
       fail(err);
     }
@@ -107,7 +108,7 @@ export const useDesktop = create<DesktopState>((set, get) => ({
     if (!desktop || !dir || !result) return;
     try {
       const { written } = await desktop.project.write(dir, result.files);
-      useUI.getState().notify(`최신 결과로 파일 ${written}개를 다시 저장했습니다.`);
+      useUI.getState().notify(t('최신 결과로 파일 {0}개를 다시 저장했습니다.', [written]));
     } catch (err) {
       fail(err);
     }
@@ -140,13 +141,13 @@ export const useDesktop = create<DesktopState>((set, get) => ({
     if (!desktop || !dir) return;
     const missing = requiredEnv().filter((n) => !envSet.includes(n));
     if (missing.length) {
-      useUI.getState().notify(`필요한 값이 비어 있습니다: ${missing.join(', ')}`, 'error');
+      useUI.getState().notify(t('필요한 값이 비어 있습니다: {0}', [missing.join(', ')]), 'error');
       return;
     }
     const deps = dependencies();
     const ok = window.confirm(
-      'AI가 만든 코드를 이 PC에서 실행합니다. 이 코드는 사용자 계정 권한으로 동작하므로, 처음 실행하기 전에 코드를 한 번 살펴보세요.\n\n' +
-        `설치할 패키지 (설치 스크립트는 실행하지 않음):\n${deps.length ? deps.map((d) => `· ${d}`).join('\n') : '· (package.json을 읽지 못함)'}\n\n계속할까요?`,
+      t('AI가 만든 코드를 이 PC에서 실행합니다. 이 코드는 사용자 계정 권한으로 동작하므로, 처음 실행하기 전에 코드를 한 번 살펴보세요.\n\n') +
+        t('설치할 패키지 (설치 스크립트는 실행하지 않음):\n{0}\n\n계속할까요?', [deps.length ? deps.map((d) => `· ${d}`).join('\n') : t('· (package.json을 읽지 못함)')]),
     );
     if (!ok) return;
     set({ logs: [] });

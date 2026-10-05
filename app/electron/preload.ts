@@ -14,6 +14,9 @@ function subscribe<T>(channel: string) {
 
 const api: DesktopAPI = {
   platform: process.platform,
+  ui: {
+    setLang: (lang) => invoke('ui:setLang', lang),
+  },
   ai: {
     keyLabel: () => invoke('ai:keyLabel'),
     setKey: (key) => invoke('ai:setKey', key),

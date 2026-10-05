@@ -13,6 +13,8 @@ import { useUI } from '../store/ui';
 import { Button, IconButton } from '../ui/controls';
 import BotNodeCard, { prettyRefs } from './BotNodeCard';
 import { openDraft } from './DraftDialog';
+import { t } from '../i18n/t';
+import { tx } from '../i18n/tx';
 
 export const NODE_DRAG_MIME = 'application/x-dbb-node';
 export const NODE_WIDTH = 240;
@@ -110,9 +112,9 @@ function ZoomControls() {
   const rf = useReactFlow();
   return (
     <Panel position="bottom-left" className="flex items-center rounded-lg border border-line bg-panel p-0.5">
-      <IconButton icon={Minus} label="축소" onClick={() => rf.zoomOut({ duration: 120 })} />
-      <IconButton icon={Plus} label="확대" onClick={() => rf.zoomIn({ duration: 120 })} />
-      <IconButton icon={Maximize} label="전체 보기" onClick={() => rf.fitView({ duration: 200, padding: 0.2 })} />
+      <IconButton icon={Minus} label={t('축소')} onClick={() => rf.zoomOut({ duration: 120 })} />
+      <IconButton icon={Plus} label={t('확대')} onClick={() => rf.zoomIn({ duration: 120 })} />
+      <IconButton icon={Maximize} label={t('전체 보기')} onClick={() => rf.fitView({ duration: 200, padding: 0.2 })} />
     </Panel>
   );
 }
@@ -128,14 +130,11 @@ function EmptyState() {
   return (
     <div className="pointer-events-none absolute inset-0 flex items-center justify-center p-4">
       <div className="pointer-events-auto max-w-sm rounded-xl border border-line bg-panel p-6 text-center">
-        <h2 className="text-base font-semibold text-fg">빈 캔버스</h2>
-        <p className="mt-2 text-sm text-fg-muted">
-          왼쪽 목록에서 <strong className="font-semibold text-fg">트리거</strong>를 끌어다 놓아 흐름을 시작하세요.
-          노드를 클릭해도 화면 가운데에 추가됩니다.
-        </p>
+        <h2 className="text-base font-semibold text-fg">{t('빈 캔버스')}</h2>
+        <p className="mt-2 text-sm text-fg-muted">{tx('왼쪽 목록에서 {0}를 끌어다 놓아 흐름을 시작하세요. 노드를 클릭해도 화면 가운데에 추가됩니다.', [<strong className="font-semibold text-fg">{t('트리거')}</strong>])}</p>
         <div className="mt-4 flex flex-wrap justify-center gap-2">
-          <Button variant="primary" icon={Wand} onClick={openDraft}>설명으로 초안 만들기</Button>
-          <Button variant="secondary" onClick={loadExample}>예제: 주사위 봇</Button>
+          <Button variant="primary" icon={Wand} onClick={openDraft}>{t('설명으로 초안 만들기')}</Button>
+          <Button variant="secondary" onClick={loadExample}>{t('예제: 주사위 봇')}</Button>
         </div>
       </div>
     </div>
@@ -211,7 +210,7 @@ export function Canvas() {
         fitViewOptions={{ padding: 0.2, maxZoom: 1 }}
       >
         <Background variant={BackgroundVariant.Dots} gap={GRID} size={1.2} />
-        <MiniMap nodeClassName={minimapClass} pannable zoomable ariaLabel="미니맵" style={{ width: 168, height: 112 }} />
+        <MiniMap nodeClassName={minimapClass} pannable zoomable ariaLabel={t('미니맵')} style={{ width: 168, height: 112 }} />
         <ZoomControls />
       </ReactFlow>
       {nodes.length === 0 && <EmptyState />}

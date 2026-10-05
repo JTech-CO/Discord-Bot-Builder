@@ -7,6 +7,7 @@ import { useGeneration } from './generation';
 import { useIssues } from './issues';
 import { useProject } from './project';
 import { useUI } from './ui';
+import { t } from '../i18n/t';
 
 export type DraftMode = 'new' | 'append';
 
@@ -52,7 +53,7 @@ export const useDraft = create<DraftState>((set) => ({
     const key = useApiKey.getState();
     if (desktop ? !key.label : !key.key) {
       useUI.getState().setKeyDialogOpen(true);
-      set({ status: 'error', error: 'Anthropic API 키를 먼저 입력해 주세요.' });
+      set({ status: 'error', error: t('Anthropic API 키를 먼저 입력해 주세요.') });
       return;
     }
     controller = new AbortController();

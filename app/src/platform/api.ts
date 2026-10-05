@@ -33,6 +33,10 @@ export type DesktopDraftResult =
 
 export interface DesktopAPI {
   platform: string;
+  ui: {
+    /** The main process writes some messages (errors, bot run status) in this language. */
+    setLang(lang: 'ko' | 'en'): Promise<void>;
+  };
   ai: {
     /** Masked key ("sk-ant-…abcd") when one is stored, else null. The key itself never reaches the renderer. */
     keyLabel(): Promise<string | null>;
