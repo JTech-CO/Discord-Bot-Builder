@@ -9,7 +9,8 @@ import { DEFAULT_META, type BotEdge, type BotNode, type ProjectMeta } from '../f
 import { defaultProps, getDef } from '../nodes/registry';
 import type { Props } from '../nodes/types';
 import { debouncedLocalStorage } from './storage';
-import { t } from '../i18n/t';
+import { diceExampleFor } from '../flow/examples';
+import { t, useLang, type Lang } from '../i18n/t';
 
 interface Snapshot {
   meta: ProjectMeta;
@@ -241,3 +242,25 @@ export const useProject = create<ProjectState>()(
     },
   ),
 );
+
+// ── The example follows the UI language ───────────────
+// Only while it is untouched. A project the user has edited keeps their text and the bot's language.
+
+/** What a project says and does, ignoring where its nodes sit on the canvas. */
+const contentOf = (file: ProjectFile) => JSON.stringify([file.meta, file.nodes.map((n) => [n.id, n.type, n.props]), file.edges]);
+
+function exampleContent(lang: Lang): string | null {
+  const loaded = fromFile(diceExampleFor(lang));
+  return loaded.ok ? contentOf(toFile(loaded.project.meta, loaded.project.nodes, loaded.project.edges)) : null;
+}
+
+useLang.subscribe((s, prev) => {
+  if (s.lang === prev.lang) return;
+  const { meta, nodes, edges } = useProject.getState();
+  if (contentOf(toFile(meta, nodes, edges)) !== exampleContent(prev.lang)) return;
+  const next = fromFile(diceExampleFor(s.lang));
+  if (!next.ok) return;
+  // Same node ids in both languages, so nodes stay where the user moved them.
+  const at = new Map(nodes.map((n) => [n.id, n.position]));
+  useProject.getState().load({ ...next.project, nodes: next.project.nodes.map((n) => ({ ...n, position: at.get(n.id) ?? n.position })) });
+});
