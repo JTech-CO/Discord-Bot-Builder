@@ -9,7 +9,7 @@ import { EN } from './en';
 const APP = join(__dirname, '..', '..');
 const HANGUL = /[가-힣]/;
 // Bot content in the example project and dev-only scripts, not UI text.
-const SKIP = [/[\\/]src[\\/]test[\\/]/, /\.test\.tsx?$/, /i18n[\\/]en\.ts$/, /flow[\\/]examples\.ts$/, /electron[\\/]smoke\.ts$/];
+const SKIP = [/[\\/]src[\\/]test[\\/]/, /\.test\.tsx?$/, /i18n[\\/]en\.ts$/, /flow[\\/]examples\.ts$/, /electron[\\/]smoke[^\\/]*\.ts$/];
 
 // comment | quoted string | template | regex literal
 const TOKENS =

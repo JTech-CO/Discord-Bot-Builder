@@ -184,6 +184,8 @@ function createWindow() {
       nodeIntegration: false,
       webviewTag: false,
       spellcheck: false,
+      // README screenshots render offscreen so animation frames run in the hidden window.
+      offscreen: smoke && process.argv.some((a) => a.startsWith('--shots=')) ? { deviceScaleFactor: 2 } : false,
     },
   });
   win.on('closed', () => (win = null));
