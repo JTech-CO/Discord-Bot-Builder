@@ -6,7 +6,7 @@ import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const root = fileURLToPath(new URL('..', import.meta.url));
-const ALLOWED = new Set(['dist', 'dist-electron']);
+const ALLOWED = new Set(['dist', 'dist-electron', 'release']);
 
 function remove(path) {
   if (!existsSync(path)) return;
