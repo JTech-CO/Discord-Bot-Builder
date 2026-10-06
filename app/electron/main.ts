@@ -14,6 +14,7 @@ import type { DesktopDraftResult, DesktopGenerateResult } from '../src/platform/
 import { inspectFolder, writeProject } from './files';
 import { BotRunner } from './runner';
 import { runSmoke } from './smoke';
+import { loadLoginShellPath } from './shellPath';
 import { store } from './store';
 import { t, useLang } from '../src/i18n/t';
 
@@ -205,7 +206,13 @@ else {
   app.whenReady().then(() => {
     // Only writing to the clipboard (the copy buttons) is allowed; reading it and everything else is denied.
     session.defaultSession.setPermissionRequestHandler((_wc, perm, cb) => cb(perm === 'clipboard-sanitized-write'));
-    if (!devUrl) Menu.setApplicationMenu(null);
+    loadLoginShellPath();
+    // Windows: no menu bar. macOS keeps the standard app, edit and window menus: text fields need them for
+    // ⌘C / ⌘V / ⌘Z, and ⌘Q quits. Development keeps Electron's default menu with the dev tools.
+    if (!devUrl) {
+      const mac = Menu.buildFromTemplate([{ role: 'appMenu' }, { role: 'editMenu' }, { role: 'windowMenu' }]);
+      Menu.setApplicationMenu(process.platform === 'darwin' ? mac : null);
+    }
     createWindow();
   });
   app.on('before-quit', () => void runner.stop());
