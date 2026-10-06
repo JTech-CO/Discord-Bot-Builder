@@ -17,7 +17,8 @@
     "desktop": "npm run build && npm run desktop:build && electron .",
     "desktop:dev": "npm run desktop:build && electron . --dev-url=http://localhost:5173",
     "icon": "electron scripts/make-icon.cjs",
-    "dist:win": "npm run build && npm run desktop:build && node scripts/clean.mjs release && electron-builder --win nsis --x64"
+    "dist:win": "npm run build && npm run desktop:build && node scripts/clean.mjs release && electron-builder --win nsis --x64 --publish never",
+    "dist:mac": "npm run build && npm run desktop:build && node scripts/clean.mjs release && electron-builder --mac dmg --arm64 --x64 --publish never"
   },
   "devDependencies": {
     "@anthropic-ai/sdk": "^0.128.0",
@@ -53,6 +54,10 @@
       "dist-electron/**/*",
       "package.json"
     ],
+    "electronLanguages": [
+      "ko",
+      "en-US"
+    ],
     "win": {
       "target": [
         {
@@ -75,9 +80,22 @@
       ],
       "artifactName": "Discord-Bot-Builder-Setup-${version}.${ext}"
     },
-    "electronLanguages": [
-      "ko",
-      "en-US"
-    ]
+    "mac": {
+      "target": [
+        {
+          "target": "dmg",
+          "arch": [
+            "arm64",
+            "x64"
+          ]
+        }
+      ],
+      "category": "public.app-category.developer-tools",
+      "identity": "-",
+      "hardenedRuntime": false
+    },
+    "dmg": {
+      "artifactName": "Discord-Bot-Builder-${version}-${arch}.${ext}"
+    }
   }
 }

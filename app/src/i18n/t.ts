@@ -12,9 +12,14 @@ export const useLang = create<{ lang: Lang; setLang: (lang: Lang) => void }>((se
   setLang: (lang) => set({ lang }),
 }));
 
+// Shortcut labels are written with Ctrl; Macs show ⌘ (the editor accepts both). Only browsers report a Mac here.
+const MAC = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.userAgent);
+
+export const forPlatform = (text: string) => (MAC ? text.replace(/Ctrl ?\+ ?/g, '⌘') : text);
+
 /** `ko` in the current UI language. `{0}`, `{1}`, … are replaced by `params` in order; null, undefined and false print nothing, as in JSX. */
 export function t(ko: string, params?: readonly (string | number | boolean | null | undefined)[]): string {
-  const text = useLang.getState().lang === 'en' ? (EN[ko] ?? ko) : ko;
+  const text = forPlatform(useLang.getState().lang === 'en' ? (EN[ko] ?? ko) : ko);
   if (!params) return text;
   return text.replace(/\{(\d+)\}/g, (m, i: string) => {
     if (Number(i) >= params.length) return m;

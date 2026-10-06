@@ -1,0 +1,70 @@
+name: Installers
+
+# Builds the Windows and macOS installers on their own runners (a .dmg can only be built on macOS).
+# Runs for pull requests that touch the desktop app, on demand, and for version tags (v*), which also
+# attach the installers to a GitHub release.
+on:
+  workflow_dispatch:
+  push:
+    tags: ['v*']
+  pull_request:
+    paths:
+      - 'app/electron/**'
+      - 'app/build/**'
+      - 'app/package.json'
+      - 'app/package-lock.json'
+      - 'app/vite.electron.config.ts'
+      - '.github/workflows/installers.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            script: dist:win
+            files: app/release/*.exe
+          - os: macos-latest
+            script: dist:mac
+            files: app/release/*.dmg
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        working-directory: app
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: app/package-lock.json
+      - run: npm ci
+      - run: npm run ${{ matrix.script }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: installer-${{ matrix.os }}
+          path: ${{ matrix.files }}
+          if-no-files-found: error
+
+  release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: installers
+          merge-multiple: true
+      - name: Attach the installers to a release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          # Tags with a pre-release part (v2.0.0-alpha.1) become pre-releases.
+          prerelease=$([[ "$GITHUB_REF_NAME" == *-* ]] && echo --prerelease || true)
+          gh release create "$GITHUB_REF_NAME" installers/* --repo "$GITHUB_REPOSITORY" --title "$GITHUB_REF_NAME" --generate-notes $prerelease

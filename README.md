@@ -8,7 +8,7 @@
 
 [![CI](https://github.com/JTech-CO/Discord-Bot-Builder/actions/workflows/ci.yml/badge.svg)](https://github.com/JTech-CO/Discord-Bot-Builder/actions/workflows/ci.yml)
 [![version](https://img.shields.io/github/package-json/v/JTech-CO/Discord-Bot-Builder?filename=app%2Fpackage.json&label=version&color=5865F2)](app/package.json)
-![platform](https://img.shields.io/badge/platform-Windows%20%7C%20Web-2a2c33)
+![platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Web-2a2c33)
 ![UI](https://img.shields.io/badge/UI-%ED%95%9C%EA%B5%AD%EC%96%B4%20%7C%20English-2a2c33)
 
 ![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?logo=typescript&logoColor=white)
@@ -64,7 +64,7 @@
 
 ## 시작하기
 
-**Windows:** [설치 파일 만들기](#windows-설치-파일)로 `Discord-Bot-Builder-Setup-<버전>.exe`를 만들어 실행합니다. 생성된 봇을 앱에서 돌리려면 [Node.js](https://nodejs.org/) 22 이상이 필요합니다.
+**Windows · macOS:** [설치 파일](#설치-파일-windows--macos)을 받아 설치합니다(Windows는 `Setup.exe`, macOS는 `.dmg`). 생성된 봇을 앱에서 돌리려면 [Node.js](https://nodejs.org/) 22 이상이 필요합니다.
 
 **소스에서 실행:**
 
@@ -86,17 +86,34 @@ npm run desktop          # 데스크톱 앱
 - **창 보안:** 샌드박스와 컨텍스트 격리를 켜고 Node 통합을 끕니다. 모든 IPC는 호출한 화면의 출처를 확인하고 zod로 검증하며, 파일 쓰기와 실행은 사용자가 대화상자에서 고른 폴더에서만 허용합니다. 외부 링크는 허용 목록에 있는 곳만 브라우저로 엽니다.
 - **점검:** `npx electron . --smoke`(먼저 `npm run build`와 `npm run desktop:build`)로 창 로드, preload 연결, 금지된 IPC 호출 거부, 암호화 저장 왕복, 그리고 로컬 가짜 API를 상대로 한 코드 생성 한 번을 확인합니다. 점검은 별도 프로필에서 돌아 실제 앱 데이터를 건드리지 않습니다. `--shots=<폴더>`를 더하면 이 README의 스크린샷을 다시 찍습니다.
 
-## Windows 설치 파일
+## 설치 파일 (Windows · macOS)
+
+코드는 하나이고, 설치 파일만 운영체제별로 만듭니다.
 
 ```bash
 cd app
-npm run dist:win         # → app/release/Discord-Bot-Builder-Setup-<버전>.exe
+npm run dist:win         # Windows에서 → app/release/Discord-Bot-Builder-Setup-<버전>.exe
+npm run dist:mac         # macOS에서   → app/release/Discord-Bot-Builder-<버전>-arm64.dmg, -x64.dmg
 ```
 
+`.dmg`는 macOS에서만 만들 수 있습니다. GitHub Actions의 **Installers** 워크플로가 Windows와 macOS 러너에서 두 설치 파일을 함께 만들며, 데스크톱 앱을 건드리는 PR마다 돌고 결과는 실행 기록의 Artifacts에서 받습니다. `v`로 시작하는 태그(예: `v2.0.0-alpha.1`)를 올리면 GitHub 릴리스를 만들어 설치 파일을 붙입니다.
+
+**Windows**
+
 - 설치 프로그램(NSIS, x64)은 관리자 권한 없이 사용자 계정에 설치하며, 설치 위치를 고를 수 있고 바탕화면·시작 메뉴 바로가기를 만듭니다. 설치 화면은 한국어와 영어를 지원합니다. 삭제는 Windows 설정 → 앱에서 합니다.
-- 코드 서명을 하지 않아 처음 실행할 때 Windows SmartScreen이 "Windows의 PC 보호" 경고를 띄웁니다. **추가 정보 → 실행**을 누르면 설치됩니다. 배포하려면 코드 서명 인증서가 필요합니다.
+- 코드 서명을 하지 않아 처음 실행할 때 Windows SmartScreen이 "Windows의 PC 보호" 경고를 띄웁니다. **추가 정보 → 실행**을 누르면 설치됩니다.
+
+**macOS**
+
+- Apple Silicon(`arm64`)과 Intel(`x64`)용 `.dmg`를 따로 만듭니다. 열어서 앱을 응용 프로그램 폴더로 끌어 놓으면 됩니다.
+- Apple Developer ID가 없어 임시 서명(ad-hoc)만 하고 공증하지 않았습니다. 처음 열 때 "확인되지 않은 개발자" 경고가 뜨면, **시스템 설정 → 개인정보 보호 및 보안**에서 **그래도 열기**를 누릅니다. 정식 배포에는 Apple Developer ID 서명과 공증이 필요합니다.
+- Finder로 연 앱은 터미널의 PATH를 받지 못하므로, 앱이 시작할 때 로그인 셸에서 PATH를 읽어 Homebrew·nvm·공식 설치 프로그램으로 설치한 Node.js를 찾습니다.
+- 메뉴 막대에 앱·편집·윈도우 메뉴가 있어 ⌘C / ⌘V / ⌘Z와 ⌘Q가 동작하고, 화면의 단축키 표시도 ⌘로 바뀝니다.
+
+**공통**
+
 - 화면과 main 프로세스 코드는 의존성까지 번들에 들어 있어 설치본에는 `node_modules`가 없습니다. 그래서 런타임 패키지도 `devDependencies`에 둡니다.
-- 아이콘은 `app/build/icon.svg`가 원본이며, 바꾼 뒤 `npm run icon`으로 `icon.png`를 다시 만듭니다.
+- 아이콘은 `app/build/icon.svg`가 원본이며, 바꾼 뒤 `npm run icon`으로 `icon.png`(1024px)를 다시 만듭니다. Windows `.ico`와 macOS `.icns`는 빌드할 때 여기서 만들어집니다.
 
 ## 앱 안 생성과 API 키
 
