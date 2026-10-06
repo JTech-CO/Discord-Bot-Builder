@@ -28,7 +28,7 @@ function ChatHistoryModal({ isOpen, onClose }) {
     const handleDownload = () => {
         if (chatHistory.length === 0) return;
 
-        let text = '=== Hybrid AI Bot Builder — AI 채팅 내역 ===\n';
+        let text = '=== Hybrid AI Bot Builder - AI 채팅 내역 ===\n';
         text += `내보내기 시간: ${new Date().toLocaleString('ko-KR')}\n`;
         text += `총 메시지 수: ${chatHistory.length}\n`;
         text += '='.repeat(50) + '\n\n';

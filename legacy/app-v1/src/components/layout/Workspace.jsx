@@ -275,7 +275,7 @@ function WorkspaceInner() {
             {/* 선택된 노드 수 표시 */}
             {selectedIds.size > 1 && (
                 <div className="absolute top-3 left-1/2 -translate-x-1/2 px-3 py-1.5 bg-discord-blurple rounded-md-discord text-[11px] font-semibold text-white shadow-lg z-10 animate-fade-in">
-                    {selectedIds.size}개 노드 선택됨 — Del 삭제 · Ctrl+C 복사 · Ctrl+X 잘라내기
+                    {selectedIds.size}개 노드 선택됨 · Del 삭제 · Ctrl+C 복사 · Ctrl+X 잘라내기
                 </div>
             )}
 
