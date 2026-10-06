@@ -44,6 +44,10 @@ jobs:
           cache-dependency-path: app/package-lock.json
       - run: npm ci
       - run: npm run ${{ matrix.script }}
+        env:
+          # electron-builder skips all signing on pull requests, including the ad-hoc signature that
+          # Apple silicon needs to open the app at all. Ad-hoc signing uses no secrets, so keep it on.
+          CSC_FOR_PULL_REQUEST: 'true'
       - uses: actions/upload-artifact@v4
         with:
           name: installer-${{ matrix.os }}
