@@ -1,7 +1,7 @@
 {
   "name": "discord-bot-builder",
   "private": true,
-  "version": "2.0.0-alpha.0",
+  "version": "2.0.0",
   "description": "Design Discord bots as flowcharts, compile them into a prompt, and let AI write the code.",
   "author": "JTech-CO",
   "type": "module",
@@ -78,7 +78,7 @@
         "ko_KR",
         "en_US"
       ],
-      "artifactName": "Discord-Bot-Builder-Setup-${version}.${ext}"
+      "artifactName": "Discord-Bot-Builder-Setup.${ext}"
     },
     "mac": {
       "target": [
@@ -95,7 +95,7 @@
       "hardenedRuntime": false
     },
     "dmg": {
-      "artifactName": "Discord-Bot-Builder-${version}-${arch}.${ext}"
+      "artifactName": "Discord-Bot-Builder-mac-${arch}.${ext}"
     }
   }
 }
